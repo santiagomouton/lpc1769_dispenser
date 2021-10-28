@@ -18,7 +18,7 @@ void configurarPuertosTeclado(){
 	int i;
 	for(i=0 ; i<4; i++){
 		LPC_GPIO2->FIODIR|=(1<<pinesFilas[i]);//pines como output de las filas del teclado
-		LPC_GPIO2->FIOCLR|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//set en el otro
+		LPC_GPIO2->FIOCLR|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//Tenía puesto un SET, hay que ver q pasa
 	}
 	//el resto de los pines están como input y pull up asi que las columnas del teclado están configuradas ya...
 }
