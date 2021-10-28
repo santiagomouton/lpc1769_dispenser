@@ -1,0 +1,2 @@
+../src/Teclado.c:17:6:configurarPuertosTeclado	16	static
+../src/Teclado.c:26:6:loopTeclado	24	static
