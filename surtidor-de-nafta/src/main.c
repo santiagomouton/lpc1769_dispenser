@@ -29,9 +29,9 @@ int main(void){
 
 	while(1){
 		LPC_GPIO0->FIOSET |= (1<<22);  // prende el led
-		retardo(3);
+		retardoEnSeg(3);
 		LPC_GPIO0->FIOCLR |= (1<<22);  // apaga el led
-		retardo(3);
+		retardoEnSeg(3);
 
 	}
 
