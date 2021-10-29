@@ -16,6 +16,7 @@
 #include "Utils.h"
 #include <math.h>
 #include <stdlib.h>
+
 //#include "Teclado.h"
 //#include "Uart.h"
 
@@ -27,6 +28,8 @@ float calcularCosto(int cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
+void surtirHastaLlenar();
+void surtirHastaClickear();
 //void EINT3_IRQHandler(void);
 
 char ingresadoPorTeclado[10]="";
@@ -69,6 +72,8 @@ int main(void){
 		retardoEnSeg(1);
 		LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 		retardoEnSeg(1);
+
+		//secuencia de test1
 		estadosAdmin('1');
 		estadosAdmin('1');
 		estadosAdmin('1');
@@ -77,6 +82,10 @@ int main(void){
 		estadosAdmin('0');
 		estadosAdmin('0');
 		estadosAdmin('#');
+		//------------------------
+		//secuencia de test2
+		estadosAdmin('1');
+		estadosAdmin('2');
 
 	}
 
@@ -93,6 +102,12 @@ void estadosAdmin(char datoDelTeclado){
 	}
 	else if(modoCombustible!='0' && modoCarga=='1' && modoIngresarCantidad=='0'){
 		modoIngresarCantidad=datoDelTeclado;
+	}
+	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
+		surtirHastaLlenar();
+	}
+	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
+		surtirHastaClickear();
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')
@@ -115,6 +130,14 @@ void estadosAdmin(char datoDelTeclado){
 		estadoDispenser='1';
 	}
 	return;
+}
+
+void surtirHastaLlenar()
+{
+
+}
+void surtirHastaClickear(){
+
 }
 
 void resetEstados(void){

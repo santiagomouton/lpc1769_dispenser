@@ -6,7 +6,7 @@
  * Generated linker script file for LPC1769
  * Created from linkscript.ldt by FMCreateLinkLibraries
  * Using Freemarker v2.3.30
- * MCUXpresso IDE v11.4.1 [Build 6260] [2021-09-15] on Oct 29, 2021, 10:08:49 AM
+ * MCUXpresso IDE v11.4.1 [Build 6260] [2021-09-15] on Oct 29, 2021, 10:44:14 AM
  */
 
 INCLUDE "surtidor-de-nafta_Debug_library.ld"
