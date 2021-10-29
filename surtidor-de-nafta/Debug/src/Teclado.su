@@ -1,2 +1,7 @@
+C:\Users\Scoles\Documents\MCUXpressoIDE_11.4.1_6260\workspace\CMSISv2p00_LPC17xx\inc/core_cm3.h:928:22:NVIC_EnableIRQ	16	static
+C:\Users\Scoles\Documents\MCUXpressoIDE_11.4.1_6260\workspace\CMSISv2p00_LPC17xx\inc/core_cm3.h:941:22:NVIC_DisableIRQ	16	static
+C:\Users\Scoles\Documents\MCUXpressoIDE_11.4.1_6260\workspace\CMSISv2p00_LPC17xx\inc/core_cm3.h:1012:22:NVIC_SetPriority	16	static
 ../src/Teclado.c:17:6:configurarPuertosTeclado	16	static
-../src/Teclado.c:26:6:loopTeclado	24	static
+../src/Teclado.c:27:6:loopTeclado	24	static
+../src/Teclado.c:48:6:confIntGPIOPorEINT	16	static
+../src/Teclado.c:57:6:EINT3_IRQHandler	16	static

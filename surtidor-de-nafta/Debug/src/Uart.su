@@ -1,0 +1,2 @@
+../src/Uart.c:7:6:configurarUart3	4	static
+../src/Uart.c:19:6:enviarChar	16	static

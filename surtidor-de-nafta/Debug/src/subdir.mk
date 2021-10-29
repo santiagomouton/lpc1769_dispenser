@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../src/Teclado.c \
+../src/Uart.c \
 ../src/Utils.c \
 ../src/cr_startup_lpc175x_6x.c \
 ../src/crp.c \
@@ -12,6 +13,7 @@ C_SRCS += \
 
 OBJS += \
 ./src/Teclado.o \
+./src/Uart.o \
 ./src/Utils.o \
 ./src/cr_startup_lpc175x_6x.o \
 ./src/crp.o \
@@ -19,6 +21,7 @@ OBJS += \
 
 C_DEPS += \
 ./src/Teclado.d \
+./src/Uart.d \
 ./src/Utils.d \
 ./src/cr_startup_lpc175x_6x.d \
 ./src/crp.d \
