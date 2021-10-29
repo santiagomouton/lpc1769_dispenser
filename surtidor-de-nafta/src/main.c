@@ -16,6 +16,7 @@
 #include "Utils.h"
 #include <math.h>
 #include <stdlib.h>
+
 //#include "Teclado.h"
 //#include "Uart.h"
 #define PRECIO_NAFTA 110
@@ -29,6 +30,8 @@ float calcularCosto(uint16_t cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
+void surtirHastaLlenar();
+void surtirHastaClickear();
 //void EINT3_IRQHandler(void);
 
 /* CAPTURE PARA MANGUERA */
@@ -80,6 +83,8 @@ int main(void){
 		retardoEnSeg(1);
 		LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 		retardoEnSeg(1);
+
+		//secuencia de test1
 		estadosAdmin('1');
 		estadosAdmin('1');
 		estadosAdmin('1');
@@ -88,6 +93,10 @@ int main(void){
 		estadosAdmin('0');
 		estadosAdmin('0');
 		estadosAdmin('#');
+		//------------------------
+		//secuencia de test2
+		estadosAdmin('1');
+		estadosAdmin('2');
 
 	}
 
@@ -105,8 +114,14 @@ void estadosAdmin(char datoDelTeclado){
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
 		modoIngresarCantidad = datoDelTeclado;
 	}
-	else if(modoIngresarCantidad != '0'){
-		if(datoDelTeclado == '#')
+	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
+		surtirHastaLlenar();
+	}
+	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
+		surtirHastaClickear();
+	}
+	else if(modoIngresarCantidad!='0'){
+		if(datoDelTeclado=='#')
 		{
 			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado = 0;
@@ -127,6 +142,14 @@ void estadosAdmin(char datoDelTeclado){
 		estadoDispenser='1';
 	}
 	return;
+}
+
+void surtirHastaLlenar()
+{
+
+}
+void surtirHastaClickear(){
+
 }
 
 void resetEstados(void){
