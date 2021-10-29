@@ -20,7 +20,14 @@
 //#include "Uart.h"
 
 
-void estadosAdmin(void);
+void estadosAdmin(char datoDelTeclado);
+void resetEstados(void);
+void resetBufferTeclado(void);
+float calcularCosto(int cantDeCombustible);
+void configurarPuertosTeclado(void);
+void loopTeclado(void);
+void confIntGPIOPorEINT(void);
+//void EINT3_IRQHandler(void);
 
 char ingresadoPorTeclado[10]="";
 
@@ -50,19 +57,26 @@ char  bufferTeclado[10];
 int main(void){
 
 	uint32_t relojCpu = SystemCoreClock;
-
-
+	//printf("%d",2);
+	resetBufferTeclado();
 
 	LPC_GPIO0->FIODIR     |= (1<<22);
 	//configurarPuertosTeclado();
 
 
 	while(1){
-		LPC_GPIO0->FIOSET |= (1<<22);  // prende el led
+		LPC_GPIO0->FIOSET |= (1<<22);  // apaga el led
 		retardoEnSeg(1);
-		//retardoEnSeg(3);
-		LPC_GPIO0->FIOCLR |= (1<<22);  // apaga el led
+		LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 		retardoEnSeg(1);
+		estadosAdmin('1');
+		estadosAdmin('1');
+		estadosAdmin('1');
+		//ingresamos el numero
+		estadosAdmin('1');
+		estadosAdmin('0');
+		estadosAdmin('0');
+		estadosAdmin('#');
 
 	}
 
@@ -74,31 +88,33 @@ void estadosAdmin(char datoDelTeclado){
 	if(modoCombustible=='0'){//ok
 		modoCombustible=datoDelTeclado;
 	}
-	else if(modoCombustible!='0' && modoCarga=='0'){//ok
+	else if(modoCombustible!='0' && modoCarga=='0' && modoIngresarCantidad=='0'){//ok
 		modoCarga=datoDelTeclado;
 	}
-	else if(modoCombustible!='0' && modoCarga=='1'){
+	else if(modoCombustible!='0' && modoCarga=='1' && modoIngresarCantidad=='0'){
 		modoIngresarCantidad=datoDelTeclado;
-	}
-	else if(modoCombustible!='0' && modoCarga!='0'  && datoDelTeclado!='1'){//si es dsitinto de 1 espero q sea un 2 o 3
-		estadoDispenser='1';
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')
 		{
-			cantidadDeLitrosACargar=atoi(bufferTeclado[0]) ;
-			//obtenés la cantidad de litros o pesos
+			cantidadDeLitrosACargar=atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado=0;
 			resetEstados();
 			resetBufferTeclado();
+			estadoDispenser='1';
+			//disparás una configuración de timer para que cargue la nafta
 		}
 		else{
-			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=teclaPresionada;
+			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
 			cantidadDeDatosIngresadosPorTeclado++;
 			estadoDispenser='2';
 		}
 
 	}
+	else if(modoCombustible!='0' && modoCarga!='0'  && datoDelTeclado!='1'){//si es dsitinto de 1 espero q sea un 2 o 3
+		estadoDispenser='1';
+	}
+	return;
 }
 
 void resetEstados(void){
