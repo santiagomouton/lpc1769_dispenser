@@ -18,29 +18,39 @@
 #include <stdlib.h>
 //#include "Teclado.h"
 //#include "Uart.h"
+#define PRECIO_NAFTA 110
+#define PRECIO_GASOIL 90
 
 
 void estadosAdmin(char datoDelTeclado);
 void resetEstados(void);
 void resetBufferTeclado(void);
-float calcularCosto(int cantDeCombustible);
+float calcularCosto(uint16_t cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 //void EINT3_IRQHandler(void);
 
+/* CAPTURE PARA MANGUERA */
+void TIMER0_IRQHandler(void);
+void configurarCapture(void);
+void iniciarCapture(void);
+
+
 char ingresadoPorTeclado[10]="";
 
-int precioNafta=110;
-int precioGasoil=90;
+uint16_t cantidadDeLitrosACargar=0; 
 
-int cantidadDeLitrosACargar=0;
+char modoCombustible		= '0'; // 0-Espera orden, 1-Carga Nafta, 2-Carga Gasoil
+char modoCarga				= '0'; // 0-Espera orden, 1-Cant de litros, 2-Hasta que llene, 3-Modo abierto
+char modoIngresarCantidad	= '0'; // 1-cantidad de litros, //2-cantidad de plata
+char estadoDispenser		= '0'; // 1-llenando, 2-Esperando evento de llenado
 
-char modoCombustible='0';//0-Espera orden, 1-Carga Nafta, 2-Carga Gasoil
-char modoCarga='0';//0-Espera orden, 1-Cant de litros, 2-Hasta que llene, 3-Modo abierto
-char modoIngresarCantidad='0';//1-cantidad de litros, //2-cantidad de plata
-char estadoDispenser='0';//1-llenando, 2-Esperando evento de llenado
-
+/*#########Variables del Capture#########*/
+uint32_t primerValor		= 0;
+uint32_t segundoValor 		= 0;
+uint32_t captureAcumulador 	= 0;
+uint8_t captureFlag 		= 0;
 
 /*#########Variables del teclado#########*/
 int pinesFilas[] = {9,8,7,6};
@@ -63,6 +73,7 @@ int main(void){
 	LPC_GPIO0->FIODIR     |= (1<<22);
 	//configurarPuertosTeclado();
 
+	configurarCapture(void);
 
 	while(1){
 		LPC_GPIO0->FIOSET |= (1<<22);  // apaga el led
@@ -85,24 +96,25 @@ int main(void){
 /**/
 
 void estadosAdmin(char datoDelTeclado){
-	if(modoCombustible=='0'){//ok
-		modoCombustible=datoDelTeclado;
+	if(modoCombustible == '0'){//ok
+		modoCombustible = datoDelTeclado;
 	}
-	else if(modoCombustible!='0' && modoCarga=='0' && modoIngresarCantidad=='0'){//ok
-		modoCarga=datoDelTeclado;
+	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
+		modoCarga = datoDelTeclado;
 	}
-	else if(modoCombustible!='0' && modoCarga=='1' && modoIngresarCantidad=='0'){
-		modoIngresarCantidad=datoDelTeclado;
+	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
+		modoIngresarCantidad = datoDelTeclado;
 	}
-	else if(modoIngresarCantidad!='0'){
-		if(datoDelTeclado=='#')
+	else if(modoIngresarCantidad != '0'){
+		if(datoDelTeclado == '#')
 		{
-			cantidadDeLitrosACargar=atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
-			cantidadDeDatosIngresadosPorTeclado=0;
+			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
+			cantidadDeDatosIngresadosPorTeclado = 0;
 			resetEstados();
 			resetBufferTeclado();
-			estadoDispenser='1';
+			estadoDispenser = '1';
 			//disparás una configuración de timer para que cargue la nafta
+			iniciarCapture(void);
 		}
 		else{
 			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
@@ -132,10 +144,10 @@ void resetBufferTeclado(void){
 //cantidad de combustible en litros
 float calcularCosto(int cantDeCombustible){
 	if(modoCombustible=='1'){
-		return precioNafta*cantDeCombustible;
+		return PRECIO_NAFTA*cantDeCombustible;
 	}
 	else if(modoCombustible=='2'){
-		return precioGasoil*cantDeCombustible;
+		return PRECIO_GASOIL*cantDeCombustible;
 	}
 	return -1.0;
 }
@@ -192,5 +204,44 @@ void EINT3_IRQHandler(void){
 	NVIC_EnableIRQ(EINT3_IRQn);
 }
 
+
+void TIMER0_IRQHandler(void)
+{
+	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
+	if(!flag) //TC has overflowed
+	{
+		primerValor = LPC_TIM0->CR0;
+		captureFlag = 1;
+	}
+	else
+	{
+		segundoValor 		= LPC_TIM0->CR0;
+		captureAcumulador 	+= ( segundoValor - primerValor );
+		captureFlag  		= 0;
+	}
+}
+
+
+void configurarCapture(void) {
+	LPC_SC->PCONP        |= (1<<1); 			// Por defecto timer 0 y 1 estan siempre prendidos
+	LPC_SC->PCLKSEL0     |= (3<<2); 			// Configuracion del clock de periforico clk/8 = 12,5Mhz
+	LPC_PINCON->PINSEL3  |= (3<<20);        	// Configuracion pin 1.26 como capture0.0
+	LPC_PINCON->PINMODE3 &= ~(3<<20);         	// Configuracion como pull-up
+	LPC_TIM0->CTCR       &= ~(3<<0);			// Timer Mode
+	LPC_TIM2->PR 		  = 6250000 - 1;		// Deseado 0,5 segundos = 2 periodo ==>  PR = 12,5Mhz/2 = 6,250Mhz
+	LPC_TIM0->CCR        |= (1<<1)|(1<<2);		// Conf capture, interrupcion, carga del timer por flanco de subida y bajada.
+	LPC_TIM0->TCR        &= ~(1<<0);			// Timer disabled for counting
+	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
+	NVIC_EnableIRQ(TIMER0_IRQn);	
+	return void;
+}
+
+
+void iniciarCapture(void) {
+	LPC_TIM0->CCR	|= (1<<0);
+	LPC_TIM0->TCR   |= (1<<0);		// Timer enabled for counting
+	LPC_TIM0->TCR   &= ~(1<<1);		// Timer no reset.	
+	return void;
+}
 
 
