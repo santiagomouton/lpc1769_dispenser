@@ -10,12 +10,16 @@
 
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
+//#include "lpc17xx_adc.h"
+//#include "lpc17XX_gpio.h"
 #endif
+
 
 #include <cr_section_macros.h>
 #include "Utils.h"
 #include <math.h>
 #include <stdlib.h>
+
 
 //#include "Teclado.h"
 //#include "Uart.h"
@@ -32,12 +36,12 @@ void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 void surtirHastaLlenar();
 void surtirHastaClickear();
-//void EINT3_IRQHandler(void);
 
 /* CAPTURE PARA MANGUERA */
 void TIMER0_IRQHandler(void);
 void configurarCapture(void);
 void iniciarCapture(void);
+
 
 
 char ingresadoPorTeclado[10]="";
@@ -189,7 +193,7 @@ void configurarPuertosTeclado(){
 		LPC_GPIO2->FIOSET|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//Tenía puesto un SET, hay que ver q pasa//OJO!!!
 		LPC_GPIO2->FIODIR &=~ (1<<pinesColumnas[i]);//pines como input de las columnas del teclado
 		LPC_GPIO2->FIOCLR|=(1<<pinesColumnas[i]);
-		//LPC_GPIO2->PINMODE4 &=~ (1<<pinesColumnas[i]);
+		LPC_PINCON->PINMODE4 |= (3<<(pinesColumnas[i]*2));//{4,5,6,7};
 	}
 	//el resto de los pines están como input y pull up asi que las columnas del teclado están configuradas ya...
 }
@@ -198,28 +202,48 @@ void configurarPuertosTeclado(){
 void loopTeclado(){
 	//Barrido por las filas
 	char teclaPresionada=' ';
-	int col1=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[0]);
-	int col2=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[1]);
-	int col3=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[2]);
-	int col4=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[3]);
+	int col1=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[0]);
+	int col2=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[1]);
+	int col3=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[2]);
+	int col4=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[3]);
+	int fila1=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[0]);
+	int fila2=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[1]);
+	int fila3=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[2]);
+	int fila4=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[3]);
+	int asd=LPC_GPIOINT->IO2IntStatR;
 	int nose=0;
+	int numCol=0;
+	if(LPC_GPIOINT->IO2IntStatR & (1<<4)){
+		numCol=0;
+	}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<5)){
+		numCol=1;
+	}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<6)){
+		numCol=2;
+	}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<7)){
+		numCol=3;
+	}
+
 	for (int nL=0; nL<4; nL++)
 	{
 	   LPC_GPIO2->FIOCLR|=(1<<pinesFilas[nL]);
 	   //Barrido en columnas buscando un LOW
-	   for (int nC=0; nC<4; nC++) {
-		   int nose1=LPC_GPIO2->FIOPIN;
-		   if ( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//sie stán en low los pines
-		   {
-	          teclaPresionada=teclas[nL][nC];
-	          ultimaTeclaPresionada=teclas[nL][nC];
-	          while( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//(digitalRead(pinesColumnas[nC]) == LOW)
-	          {}
-	        }
+
+
+	   if ( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[numCol]))==0 ){//sie stán en low los pines
+		   ultimaTeclaPresionada=teclas[nL][numCol];
+		   teclaPresionada=teclas[nL][numCol];
+	         /* while( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//(digitalRead(pinesColumnas[nC]) == LOW)
+	          {}*/
+		   nL=4;
 	   }
+
 	   LPC_GPIO2->FIOSET|=(1<<pinesFilas[nL]);
+
 	 }
-	 retardoEnMs(100);
+	 retardoEnMs(1000);
 	 estadosAdmin(teclaPresionada);
 
 }
