@@ -56,8 +56,8 @@ uint32_t captureAcumulador 	= 0;
 uint8_t captureFlag 		= 0;
 
 /*#########Variables del teclado#########*/
-int pinesFilas[] = {9,8,7,6};
-int pinesColumnas[] = {5,4,3,2};
+int pinesFilas[] = {12,11,10,9};
+int pinesColumnas[] = {8,7,6,5};
 char teclas[4][4] = {{'1','2','3','A'},
                      {'4','5','6','B'},
                      {'7','8','9','C'},
