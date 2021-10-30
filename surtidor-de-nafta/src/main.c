@@ -114,8 +114,9 @@ int main(void){
 /**/
 
 void estadosAdmin(char datoDelTeclado){
-	if(modoCombustible == '0'){//ok
+	if(modoCombustible == '0' && datoDelTeclado!='#'){//ok
 		modoCombustible = datoDelTeclado;
+		estadoDispenser=0;
 	}
 	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
 		modoCarga = datoDelTeclado;
@@ -252,11 +253,12 @@ void EINT3_IRQHandler(void){
 }
 
 
+
+//##########################TIMER0, TIMER 0 y CAPTURE####################################
 void TIMER0_IRQHandler(void)
 {
-	int flag=1;
 	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
-	if(flag==1)//(!flag) //TC has overflowed //OJO CON ESTO, CORREGIR
+	if(!captureFlag)//TC has overflowed
 	{
 		primerValor = LPC_TIM0->CR0;
 		captureFlag = 1;
@@ -270,6 +272,7 @@ void TIMER0_IRQHandler(void)
 }
 
 
+//Acá se configura el Capture
 void configurarCapture(void) {
 	LPC_SC->PCONP        |= (1<<1); 			// Por defecto timer 0 y 1 estan siempre prendidos
 	LPC_SC->PCLKSEL0     |= (3<<2); 			// Configuracion del clock de periforico clk/8 = 12,5Mhz
@@ -284,11 +287,18 @@ void configurarCapture(void) {
 	return;
 }
 
-
+//aca empieza a contar el timer
 void iniciarCapture(void) {
 	LPC_TIM0->CCR	|= (1<<0);
 	LPC_TIM0->TCR   |= (1<<0);		// Timer enabled for counting
 	LPC_TIM0->TCR   &= ~(1<<1);		// Timer no reset.	
+	return;
+}
+
+void dashabilitarCapture(void) {
+	LPC_TIM0->CCR		 &= ~(1<<0);
+	LPC_TIM0->TCR        &= ~(1<<0);			// Timer deshabilitado
+	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
 	return;
 }
 
