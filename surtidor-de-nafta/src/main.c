@@ -41,6 +41,7 @@ void surtirHastaClickear();
 void TIMER0_IRQHandler(void);
 void configurarCapture(void);
 void iniciarCapture(void);
+void dashabilitarCapture(void) ;
 
 
 
