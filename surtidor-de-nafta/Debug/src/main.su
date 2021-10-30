@@ -9,9 +9,9 @@ C:\Users\Scoles\Documents\MCUXpressoIDE_11.4.1_6260\workspace\CMSISv2p00_LPC17xx
 ../src/main.c:170:6:resetBufferTeclado	16	static
 ../src/main.c:177:7:calcularCosto	16	static
 ../src/main.c:189:6:configurarPuertosTeclado	16	static
-../src/main.c:202:6:loopTeclado	64	static
-../src/main.c:252:6:confIntGPIOPorEINT	16	static
-../src/main.c:261:6:EINT3_IRQHandler	16	static
-../src/main.c:271:6:TIMER0_IRQHandler	16	static
-../src/main.c:289:6:configurarCapture	8	static
-../src/main.c:304:6:iniciarCapture	4	static
+../src/main.c:202:6:confIntGPIOPorEINT	16	static
+../src/main.c:212:6:loopTeclado	32	static
+../src/main.c:244:6:EINT3_IRQHandler	16	static
+../src/main.c:255:6:TIMER0_IRQHandler	16	static
+../src/main.c:273:6:configurarCapture	8	static
+../src/main.c:288:6:iniciarCapture	4	static

@@ -198,56 +198,6 @@ void configurarPuertosTeclado(){
 	//el resto de los pines están como input y pull up asi que las columnas del teclado están configuradas ya...
 }
 
-/*Detecta la tecla que fue presionada, la podemos llamar desde el main periódicamete o por interrupciones externas*/
-void loopTeclado(){
-	//Barrido por las filas
-	char teclaPresionada=' ';
-	int col1=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[0]);
-	int col2=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[1]);
-	int col3=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[2]);
-	int col4=(LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[3]);
-	int fila1=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[0]);
-	int fila2=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[1]);
-	int fila3=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[2]);
-	int fila4=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[3]);
-	int asd=LPC_GPIOINT->IO2IntStatR;
-	int nose=0;
-	int numCol=0;
-	if(LPC_GPIOINT->IO2IntStatR & (1<<4)){
-		numCol=0;
-	}
-	else if(LPC_GPIOINT->IO2IntStatR & (1<<5)){
-		numCol=1;
-	}
-	else if(LPC_GPIOINT->IO2IntStatR & (1<<6)){
-		numCol=2;
-	}
-	else if(LPC_GPIOINT->IO2IntStatR & (1<<7)){
-		numCol=3;
-	}
-
-	for (int nL=0; nL<4; nL++)
-	{
-	   LPC_GPIO2->FIOCLR|=(1<<pinesFilas[nL]);
-	   //Barrido en columnas buscando un LOW
-
-
-	   if ( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[numCol]))==0 ){//sie stán en low los pines
-		   ultimaTeclaPresionada=teclas[nL][numCol];
-		   teclaPresionada=teclas[nL][numCol];
-	         /* while( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//(digitalRead(pinesColumnas[nC]) == LOW)
-	          {}*/
-		   nL=4;
-	   }
-
-	   LPC_GPIO2->FIOSET|=(1<<pinesFilas[nL]);
-
-	 }
-	 retardoEnMs(1000);
-	 estadosAdmin(teclaPresionada);
-
-}
-
 /*condiguración para habilitar interrupciones por GPIO para el teclado matricial*/
 void confIntGPIOPorEINT(void){
 	for(int i=0; i<4;i++){
@@ -258,12 +208,46 @@ void confIntGPIOPorEINT(void){
 	NVIC_EnableIRQ(EINT3_IRQn); 		//Habilita las interrupciones por GPIO
 }
 
+/*Detecta la tecla que fue presionada, la podemos llamar desde el main periódicamete o por interrupciones externas*/
+void loopTeclado(){
+	//Barrido por las filas
+	char teclaPresionada=' ';
+	int asd=LPC_GPIOINT->IO2IntStatR;
+	int nose=0;
+	int numCol=0;
+	if(LPC_GPIOINT->IO2IntStatR & (1<<4)){numCol=0;}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<5)){numCol=1;}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<6)){numCol=2;}
+	else if(LPC_GPIOINT->IO2IntStatR & (1<<7)){numCol=3;}
+
+	for (int nL=0; nL<4; nL++)
+	{
+	   LPC_GPIO2->FIOCLR|=(1<<pinesFilas[nL]);
+	   //Barrido en columnas buscando un LOW
+	   if ( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[numCol]))==0 ){//sie stán en low los pines
+		   ultimaTeclaPresionada=teclas[nL][numCol];
+		   teclaPresionada=teclas[nL][numCol];
+		   nL=4;
+	   }
+	   LPC_GPIO2->FIOSET|=(1<<pinesFilas[nL]);
+	 }
+	for(int i=0;i<4;i++){
+		LPC_GPIO2->FIOSET|=(1<<pinesFilas[i]);
+	}
+	 retardoEnMs(1000);
+	 estadosAdmin(teclaPresionada);
+
+}
+
+
+
 void EINT3_IRQHandler(void){
 	NVIC_DisableIRQ(EINT3_IRQn);
 	loopTeclado();
 	for(int i=0; i<4;i++){
 		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
 	}
+	int asd=LPC_GPIOINT->IO2IntStatR;
 	NVIC_EnableIRQ(EINT3_IRQn);
 }
 
