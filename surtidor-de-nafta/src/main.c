@@ -26,7 +26,7 @@
 void estadosAdmin(char datoDelTeclado);
 void resetEstados(void);
 void resetBufferTeclado(void);
-float calcularCosto(uint16_t cantDeCombustible);
+float calcularCosto(int cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
@@ -74,16 +74,20 @@ int main(void){
 	resetBufferTeclado();
 
 	LPC_GPIO0->FIODIR     |= (1<<22);
-	//configurarPuertosTeclado();
 
-	configurarCapture(void);
+	//Teclado
+	configurarPuertosTeclado();
+	confIntGPIOPorEINT();
 
+	//configurarCapture(void);
+
+	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
-		LPC_GPIO0->FIOSET |= (1<<22);  // apaga el led
-		retardoEnSeg(1);
-		LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
-		retardoEnSeg(1);
-
+		//LPC_GPIO0->FIOSET |= (1<<22);  // apaga el led
+		//retardoEnSeg(1);
+		//LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
+		//retardoEnSeg(1);
+/*
 		//secuencia de test1
 		estadosAdmin('1');
 		estadosAdmin('1');
@@ -96,7 +100,7 @@ int main(void){
 		//------------------------
 		//secuencia de test2
 		estadosAdmin('1');
-		estadosAdmin('2');
+		estadosAdmin('2');*/
 
 	}
 
@@ -129,7 +133,7 @@ void estadosAdmin(char datoDelTeclado){
 			resetBufferTeclado();
 			estadoDispenser = '1';
 			//disparás una configuración de timer para que cargue la nafta
-			iniciarCapture(void);
+			//iniciarCapture(void);
 		}
 		else{
 			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
@@ -181,7 +185,7 @@ void configurarPuertosTeclado(){
 	int i;
 	for(i=0 ; i<4; i++){
 		LPC_GPIO2->FIODIR|=(1<<pinesFilas[i]);//pines como output de las filas del teclado
-		LPC_GPIO2->FIOCLR|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//Tenía puesto un SET, hay que ver q pasa
+		LPC_GPIO2->FIOSET|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//Tenía puesto un SET, hay que ver q pasa//OJO!!!
 	}
 	//el resto de los pines están como input y pull up asi que las columnas del teclado están configuradas ya...
 }
@@ -204,7 +208,7 @@ void loopTeclado(){
 	   }
 	   LPC_GPIO2->FIOSET|=(1<<pinesFilas[nL]);
 	   }
-	   retardoEnMs(10);
+	   retardoEnMs(100);
 	   estadosAdmin(teclaPresionada);
 }
 
@@ -219,19 +223,23 @@ void confIntGPIOPorEINT(void){
 }
 
 void EINT3_IRQHandler(void){
+	for(int i=0; i<4;i++){
+			LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
+	}
 	NVIC_DisableIRQ(EINT3_IRQn);
+	loopTeclado();
 	for(int i=0; i<4;i++){
 		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
 	}
-	loopTeclado();
 	NVIC_EnableIRQ(EINT3_IRQn);
 }
 
 
 void TIMER0_IRQHandler(void)
 {
+	int flag=1;
 	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
-	if(!flag) //TC has overflowed
+	if(flag==1)//(!flag) //TC has overflowed //OJO CON ESTO, CORREGIR
 	{
 		primerValor = LPC_TIM0->CR0;
 		captureFlag = 1;
@@ -256,7 +264,7 @@ void configurarCapture(void) {
 	LPC_TIM0->TCR        &= ~(1<<0);			// Timer disabled for counting
 	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
 	NVIC_EnableIRQ(TIMER0_IRQn);	
-	return void;
+	return;
 }
 
 
@@ -264,7 +272,7 @@ void iniciarCapture(void) {
 	LPC_TIM0->CCR	|= (1<<0);
 	LPC_TIM0->TCR   |= (1<<0);		// Timer enabled for counting
 	LPC_TIM0->TCR   &= ~(1<<1);		// Timer no reset.	
-	return void;
+	return;
 }
 
 
