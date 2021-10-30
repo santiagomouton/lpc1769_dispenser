@@ -44,6 +44,7 @@ char ingresadoPorTeclado[10]="";
 
 uint16_t cantidadDeLitrosACargar=0; 
 
+char ultimaTeclaPresionada=' ';
 char modoCombustible		= '0'; // 0-Espera orden, 1-Carga Nafta, 2-Carga Gasoil
 char modoCarga				= '0'; // 0-Espera orden, 1-Cant de litros, 2-Hasta que llene, 3-Modo abierto
 char modoIngresarCantidad	= '0'; // 1-cantidad de litros, //2-cantidad de plata
@@ -56,8 +57,8 @@ uint32_t captureAcumulador 	= 0;
 uint8_t captureFlag 		= 0;
 
 /*#########Variables del teclado#########*/
-int pinesFilas[] = {12,11,10,9};
-int pinesColumnas[] = {8,7,6,5};
+int pinesFilas[] = {0,1,2,3};
+int pinesColumnas[] = {4,5,6,7};
 char teclas[4][4] = {{'1','2','3','A'},
                      {'4','5','6','B'},
                      {'7','8','9','C'},
@@ -69,7 +70,7 @@ char  bufferTeclado[10];
 
 int main(void){
 
-	uint32_t relojCpu = SystemCoreClock;
+	//uint32_t relojCpu = SystemCoreClock;
 	//printf("%d",2);
 	resetBufferTeclado();
 
@@ -186,6 +187,9 @@ void configurarPuertosTeclado(){
 	for(i=0 ; i<4; i++){
 		LPC_GPIO2->FIODIR|=(1<<pinesFilas[i]);//pines como output de las filas del teclado
 		LPC_GPIO2->FIOSET|=(1<<pinesFilas[i]);//pines de las filas en alto del teclado//Tenía puesto un SET, hay que ver q pasa//OJO!!!
+		LPC_GPIO2->FIODIR &=~ (1<<pinesColumnas[i]);//pines como input de las columnas del teclado
+		LPC_GPIO2->FIOCLR|=(1<<pinesColumnas[i]);
+		//LPC_GPIO2->PINMODE4 &=~ (1<<pinesColumnas[i]);
 	}
 	//el resto de los pines están como input y pull up asi que las columnas del teclado están configuradas ya...
 }
@@ -194,28 +198,36 @@ void configurarPuertosTeclado(){
 void loopTeclado(){
 	//Barrido por las filas
 	char teclaPresionada=' ';
+	int col1=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[0]);
+	int col2=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[1]);
+	int col3=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[2]);
+	int col4=(LPC_GPIO2->FIOPIN) & (1<<pinesFilas[3]);
+	int nose=0;
 	for (int nL=0; nL<4; nL++)
 	{
 	   LPC_GPIO2->FIOCLR|=(1<<pinesFilas[nL]);
 	   //Barrido en columnas buscando un LOW
 	   for (int nC=0; nC<4; nC++) {
-		   if (! LPC_GPIO2->FIOPIN & (1<<pinesColumnas[nC]))//sie stán en low los pines
+		   int nose1=LPC_GPIO2->FIOPIN;
+		   if ( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//sie stán en low los pines
 		   {
 	          teclaPresionada=teclas[nL][nC];
-	          while(!LPC_GPIO2->FIOPIN & (1<<pinesColumnas[nC]))//(digitalRead(pinesColumnas[nC]) == LOW)
+	          ultimaTeclaPresionada=teclas[nL][nC];
+	          while( ((LPC_GPIO2->FIOPIN) & (1<<pinesColumnas[nC]))==0 )//(digitalRead(pinesColumnas[nC]) == LOW)
 	          {}
 	        }
 	   }
 	   LPC_GPIO2->FIOSET|=(1<<pinesFilas[nL]);
-	   }
-	   retardoEnMs(100);
-	   estadosAdmin(teclaPresionada);
+	 }
+	 retardoEnMs(100);
+	 estadosAdmin(teclaPresionada);
+
 }
 
 /*condiguración para habilitar interrupciones por GPIO para el teclado matricial*/
 void confIntGPIOPorEINT(void){
 	for(int i=0; i<4;i++){
-		LPC_GPIOINT -> IO2IntEnF |= ((1 << pinesColumnas[i])); //Selecciono la interrupcion por flanco de bajada
+		LPC_GPIOINT -> IO2IntEnR |= ((1 << pinesColumnas[i])); //Selecciono la interrupcion por flanco de bajada
 		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
 	}
 	NVIC_SetPriority(EINT3_IRQn, 0); 	//Prioridad para esta interrupcion
@@ -223,9 +235,6 @@ void confIntGPIOPorEINT(void){
 }
 
 void EINT3_IRQHandler(void){
-	for(int i=0; i<4;i++){
-			LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
-	}
 	NVIC_DisableIRQ(EINT3_IRQn);
 	loopTeclado();
 	for(int i=0; i<4;i++){
