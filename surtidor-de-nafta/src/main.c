@@ -87,8 +87,11 @@ int main(void){
 	configurarPuertosTeclado();
 	confIntGPIOPorEINT();
 
-	//Timer y capture
+	//Timer y capture ok
 	configurarCapture();
+
+	//Eint surtidor dejado en plataforma
+	configurarEINT2();
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
@@ -312,16 +315,21 @@ void dashabilitarCapture(void) {
 
 //##################EINT 2 manguera reposada en un soporte#####################
 void configurarEINT2(){
-
+	LPC_PINCON->PINSEL4 |= (1<<24) ;//p2.12 como EINT2
+	LPC_SC->EXTINT      |= (1<<2);   //Limpia bandera de interrupci�n
+	LPC_SC->EXTMODE     |= (1<<2); //Selecciona interrupcion por flanco
+	LPC_SC->EXTPOLAR    |= (1<<2); //Interrumpe cuando el flanco es de subida
+	NVIC_EnableIRQ(EINT2_IRQn);    // Habilita de interrupciones externas.
 }
 
-void EINT3_IRQHandler(void){
-	NVIC_DisableIRQ(EINT3_IRQn);
-	loopTeclado();
-	for(int i=0; i<4;i++){
-		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
-	}
-	int asd=LPC_GPIOINT->IO2IntStatR;
-	NVIC_EnableIRQ(EINT3_IRQn);
+void EINT2_IRQHandler(void){//consigna de EINT
+    /*LPC_TIM2->PR = (1 << cont);
+    cont++;
+    LPC_TIM2->TCR |= (1 << 1);
+    LPC_TIM2->TCR &= ~(1 << 1);*/
+	dashabilitarCapture();
+    LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupci�n
+
+    return;
 }
 
