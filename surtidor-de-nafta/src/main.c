@@ -10,6 +10,7 @@
 
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
+#include "lpc17XX_adc.h"
 //#include "lpc17xx_adc.h"
 //#include "lpc17XX_gpio.h"
 #endif
@@ -37,6 +38,8 @@ void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 void surtirHastaLlenar();
 void surtirPorCapture();
+void configurarAdc(void);
+void habilitarAdc(void);
 
 /* CAPTURE PARA MANGUERA */
 //void TIMER0_IRQHandler(void);
@@ -46,7 +49,8 @@ void dashabilitarCapture(void) ;
 
 void configurarEINT2();
 
-
+/* ADC */
+void configurarAdc(void);
 
 char ingresadoPorTeclado[10]="";
 
@@ -317,11 +321,11 @@ void dashabilitarCapture(void) {
 
 //##################EINT 2 manguera reposada en un soporte#####################
 void configurarEINT2(){
-	LPC_PINCON->PINSEL4 |= (1<<24) ;//p2.12 como EINT2
-	LPC_SC->EXTINT      |= (1<<2);   //Limpia bandera de interrupci�n
-	LPC_SC->EXTMODE     |= (1<<2); //Selecciona interrupcion por flanco
-	LPC_SC->EXTPOLAR    |= (1<<2); //Interrumpe cuando el flanco es de subida
-	NVIC_EnableIRQ(EINT2_IRQn);    // Habilita de interrupciones externas.
+	LPC_PINCON->PINSEL4 |= (1<<24) ;		// p2.12 como EINT2
+	LPC_SC->EXTINT      |= (1<<2);   		// Limpia bandera de interrupci�n
+	LPC_SC->EXTMODE     |= (1<<2); 			// Selecciona interrupcion por flanco
+	LPC_SC->EXTPOLAR    |= (1<<2); 			// Interrumpe cuando el flanco es de subida
+	NVIC_EnableIRQ(EINT2_IRQn);				// Habilita de interrupciones externas.
 }
 
 void EINT2_IRQHandler(void){//consigna de EINT
@@ -332,4 +336,53 @@ void EINT2_IRQHandler(void){//consigna de EINT
     resetEstados();
     return;
 }
+
+
+//##################Conversion analogico-digital y paso de datos a UART#######
+/*	HACE USO DE EINT0 PARA INICIO DE CONVERSION */
+void configurarAdc(void) {
+	/* configuracion puerto de entrada para conversion 			 */
+    PINSEL_CFG_Type pinAnalog;
+    pinAnalog.Portnum = PINSEL_PORT_0;
+    pinAnalog.Pinnum = PINSEL_PIN_23;
+    pinAnalog.Funcnum = PINSEL_FUNC_1;
+    pinAnalog.Pinmode = PINSEL_PINMODE_TRISTATE;
+    PINSEL_ConfigPin(&pinAnalog);
+    /* configuracion puerto de entrada para interrupcion externa */
+    PINSEL_CFG_Type pinEINT0;
+    pinAnalog.Portnum = PINSEL_PORT_2;
+    pinAnalog.Pinnum = PINSEL_PIN_10;
+    pinAnalog.Funcnum = PINSEL_FUNC_1;
+    pinAnalog.Pinmode = PINSEL_PINMODE_PULLUP;
+    PINSEL_ConfigPin(&pinEINT0);
+    /* configuracion con driver del ADC 						 */
+	ADC_Init(LPC_ADC, 200000);						// Frecuencia de 200k
+	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,RESET);
+	ADC_ChannelCmd(LPC_ADC,0,ENABLE);				// Habilita el canal 0
+	ADC_PowerdownCmd(LPC_ADC, 0);
+	return;
+}
+
+void habilitarAdc(void) {
+	//ADC_ChannelCmd(LPC_ADC,0,ENABLE);
+	ADC_StartCmd(LPC_ADC, ADC_START_ON_EINT0);
+	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,ENABLE);
+	return;
+}
+
+void ADC_IRQHandler(void) {
+    if( LPC_ADC->ADSTAT & 1 ){
+    	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
+    }
+    LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
+    return;
+}
+
+
+
+
+
+
+
+
 
