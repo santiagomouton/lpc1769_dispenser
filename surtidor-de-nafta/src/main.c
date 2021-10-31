@@ -35,13 +35,15 @@ void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 void surtirHastaLlenar();
-void surtirHastaClickear();
+void surtirPorCapture();
 
 /* CAPTURE PARA MANGUERA */
-void TIMER0_IRQHandler(void);
+//void TIMER0_IRQHandler(void);
 void configurarCapture(void);
 void iniciarCapture(void);
 void dashabilitarCapture(void) ;
+
+void configurarEINT2();
 
 
 
@@ -85,7 +87,8 @@ int main(void){
 	configurarPuertosTeclado();
 	confIntGPIOPorEINT();
 
-	//configurarCapture(void);
+	//Timer y capture
+	configurarCapture();
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
@@ -129,7 +132,7 @@ void estadosAdmin(char datoDelTeclado){
 		surtirHastaLlenar();
 	}
 	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
-		surtirHastaClickear();
+		surtirPorCapture();
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')
@@ -159,8 +162,8 @@ void surtirHastaLlenar()
 {
 
 }
-void surtirHastaClickear(){
-
+void surtirPorCapture(){
+	iniciarCapture();
 }
 
 void resetEstados(void){
@@ -256,6 +259,31 @@ void EINT3_IRQHandler(void){
 
 
 //##########################TIMER0, TIMER 0 y CAPTURE####################################
+
+
+//Acá se configura el Capture
+void configurarCapture(void) {
+	LPC_SC->PCONP        |= (1<<1); 			// Por defecto timer 0 y 1 estan siempre prendidos
+	LPC_SC->PCLKSEL0     |= (3<<2); 			// Configuracion del clock de periforico clk/8 = 12,5Mhz
+	LPC_PINCON->PINSEL3  |= (3<<20);        	// Configuracion pin 1.26 como capture0.0
+	LPC_PINCON->PINMODE3 &= ~(3<<20);         	// Configuracion como pull-up
+	LPC_TIM0->CTCR       &= ~(3<<0);			// Timer Mode
+	LPC_TIM0->PR 		  = 6250000 - 1;		// Deseado 0,5 segundos = 2 periodo ==>  PR = 12,5Mhz/2 = 6,250Mhz
+	LPC_TIM0->CCR        |= (1<<1)|(1<<2);		// Conf capture, interrupcion, carga del timer por flanco de subida y bajada.
+	LPC_TIM0->TCR        &= ~(1<<0);			// Timer disabled for counting
+	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
+	return;
+}
+
+//aca empieza a contar el timer
+void iniciarCapture(void) {
+	LPC_TIM0->CCR	|= (1<<0);
+	LPC_TIM0->TCR   |= (1<<0);		// Timer enabled for counting
+	LPC_TIM0->TCR   &= ~(1<<1);		// Timer no reset.
+	NVIC_EnableIRQ(TIMER0_IRQn);
+	return;
+}
+
 void TIMER0_IRQHandler(void)
 {
 	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
@@ -272,35 +300,28 @@ void TIMER0_IRQHandler(void)
 	}
 }
 
-
-//Acá se configura el Capture
-void configurarCapture(void) {
-	LPC_SC->PCONP        |= (1<<1); 			// Por defecto timer 0 y 1 estan siempre prendidos
-	LPC_SC->PCLKSEL0     |= (3<<2); 			// Configuracion del clock de periforico clk/8 = 12,5Mhz
-	LPC_PINCON->PINSEL3  |= (3<<20);        	// Configuracion pin 1.26 como capture0.0
-	LPC_PINCON->PINMODE3 &= ~(3<<20);         	// Configuracion como pull-up
-	LPC_TIM0->CTCR       &= ~(3<<0);			// Timer Mode
-	LPC_TIM2->PR 		  = 6250000 - 1;		// Deseado 0,5 segundos = 2 periodo ==>  PR = 12,5Mhz/2 = 6,250Mhz
-	LPC_TIM0->CCR        |= (1<<1)|(1<<2);		// Conf capture, interrupcion, carga del timer por flanco de subida y bajada.
-	LPC_TIM0->TCR        &= ~(1<<0);			// Timer disabled for counting
-	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
-	NVIC_EnableIRQ(TIMER0_IRQn);	
-	return;
-}
-
-//aca empieza a contar el timer
-void iniciarCapture(void) {
-	LPC_TIM0->CCR	|= (1<<0);
-	LPC_TIM0->TCR   |= (1<<0);		// Timer enabled for counting
-	LPC_TIM0->TCR   &= ~(1<<1);		// Timer no reset.	
-	return;
-}
-
 void dashabilitarCapture(void) {
 	LPC_TIM0->CCR		 &= ~(1<<0);
 	LPC_TIM0->TCR        &= ~(1<<0);			// Timer deshabilitado
 	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
+
+	NVIC_DisableIRQ(TIMER0_IRQn);
 	return;
 }
 
+
+//##################EINT 2 manguera reposada en un soporte#####################
+void configurarEINT2(){
+
+}
+
+void EINT3_IRQHandler(void){
+	NVIC_DisableIRQ(EINT3_IRQn);
+	loopTeclado();
+	for(int i=0; i<4;i++){
+		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
+	}
+	int asd=LPC_GPIOINT->IO2IntStatR;
+	NVIC_EnableIRQ(EINT3_IRQn);
+}
 
