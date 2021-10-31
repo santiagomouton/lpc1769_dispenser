@@ -25,12 +25,13 @@
 //#include "Uart.h"
 #define PRECIO_NAFTA 110
 #define PRECIO_GASOIL 90
+#define CAUDAL_POR_SEG 0.5
 
 
 void estadosAdmin(char datoDelTeclado);
 void resetEstados(void);
 void resetBufferTeclado(void);
-float calcularCosto(int cantDeCombustible);
+float calcularCostoPorTiempo(float cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
@@ -72,6 +73,7 @@ char teclas[4][4] = {{'1','2','3','A'},
                      {'*','0','#','D'}};
 int cantidadDeDatosIngresadosPorTeclado=0;
 char  bufferTeclado[10];
+float montoAPagar=0;
 
 
 
@@ -89,9 +91,6 @@ int main(void){
 
 	//Timer y capture ok
 	configurarCapture();
-
-	//Eint surtidor dejado en plataforma
-	configurarEINT2();
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
@@ -127,15 +126,15 @@ void estadosAdmin(char datoDelTeclado){
 	}
 	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
 		modoCarga = datoDelTeclado;
+		if (modoCarga=='2'){
+
+		}
+		else if(modoCarga=='3'){
+			surtirPorCapture();
+		}
 	}
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
 		modoIngresarCantidad = datoDelTeclado;
-	}
-	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
-		surtirHastaLlenar();
-	}
-	else if(modoCombustible!='0' && modoCarga=='2' && modoIngresarCantidad=='0'){
-		surtirPorCapture();
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')
@@ -167,6 +166,7 @@ void surtirHastaLlenar()
 }
 void surtirPorCapture(){
 	iniciarCapture();
+	configurarEINT2();
 }
 
 void resetEstados(void){
@@ -182,7 +182,7 @@ void resetBufferTeclado(void){
 }
 
 //cantidad de combustible en litros
-float calcularCosto(int cantDeCombustible){
+float calcularCostoPorTiempo(float cantDeCombustible){
 	if(modoCombustible=='1'){
 		return PRECIO_NAFTA*cantDeCombustible;
 	}
@@ -242,7 +242,7 @@ void loopTeclado(){
 	for(int i=0;i<4;i++){
 		LPC_GPIO2->FIOSET|=(1<<pinesFilas[i]);
 	}
-	 retardoEnMs(1000);
+	 retardoEnMs(2000);
 	 estadosAdmin(teclaPresionada);
 
 }
@@ -323,13 +323,11 @@ void configurarEINT2(){
 }
 
 void EINT2_IRQHandler(void){//consigna de EINT
-    /*LPC_TIM2->PR = (1 << cont);
-    cont++;
-    LPC_TIM2->TCR |= (1 << 1);
-    LPC_TIM2->TCR &= ~(1 << 1);*/
+	NVIC_DisableIRQ(EINT2_IRQn);
+	montoAPagar=calcularCostoPorTiempo(CAUDAL_POR_SEG*captureAcumulador);
 	dashabilitarCapture();
-    LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupci�n
-
+    LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupcion
+    resetEstados();
     return;
 }
 
