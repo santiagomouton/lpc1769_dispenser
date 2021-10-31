@@ -11,7 +11,6 @@
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
 #include "lpc17XX_adc.h"
-//#include "lpc17xx_adc.h"
 //#include "lpc17XX_gpio.h"
 #endif
 
@@ -78,6 +77,9 @@ char teclas[4][4] = {{'1','2','3','A'},
 int cantidadDeDatosIngresadosPorTeclado=0;
 char  bufferTeclado[10];
 float montoAPagar=0;
+
+/*#########Variables del ADC###########*/
+uint16_t conversionValor  = 0;
 
 
 
@@ -357,7 +359,6 @@ void configurarAdc(void) {
     PINSEL_ConfigPin(&pinEINT0);
     /* configuracion con driver del ADC 						 */
 	ADC_Init(LPC_ADC, 200000);						// Frecuencia de 200k
-	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,RESET);
 	ADC_ChannelCmd(LPC_ADC,0,ENABLE);				// Habilita el canal 0
 	ADC_PowerdownCmd(LPC_ADC, 0);
 	return;
@@ -365,24 +366,29 @@ void configurarAdc(void) {
 
 void habilitarAdc(void) {
 	//ADC_ChannelCmd(LPC_ADC,0,ENABLE);
-	ADC_StartCmd(LPC_ADC, ADC_START_ON_EINT0);
-	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,ENABLE);
+	ADC_StartCmd(LPC_ADC, ADC_START_ON_EINT0);		// Configuro inicio de conversion por EINT0
+	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,ENABLE);		// Habilito las interrupciones por canal 0
+	return;
+}
+
+void deshabilitarAdc(void) {
+	ADC_PowerdownCmd(LPC_ADC, RESET);				// Configuro ADC como no operativo
+	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,RESET);		// Deshabilito las interrupciones
 	return;
 }
 
 void ADC_IRQHandler(void) {
     if( LPC_ADC->ADSTAT & 1 ){
+    	uint8_t ascciValue[4];
     	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
+    	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
+    	for(uint8_t i; i<4; i++) {
+    		enviarChar(ascciValue[i]);						// Envio los caracteres por UART
+    		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
+    	}
     }
     LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
     return;
 }
-
-
-
-
-
-
-
 
 
