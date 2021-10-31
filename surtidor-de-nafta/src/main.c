@@ -344,7 +344,7 @@ void EINT2_IRQHandler(void){//consigna de EINT
 /*	HACE USO DE EINT0 PARA INICIO DE CONVERSION */
 void configurarAdc(void) {
 	/* configuracion puerto de entrada para conversion 			 */
-    PINSEL_CFG_Type pinAnalog;
+	PINSEL_CFG_Type pinAnalog;
     pinAnalog.Portnum = PINSEL_PORT_0;
     pinAnalog.Pinnum = PINSEL_PIN_23;
     pinAnalog.Funcnum = PINSEL_FUNC_1;
@@ -358,10 +358,10 @@ void configurarAdc(void) {
     pinAnalog.Pinmode = PINSEL_PINMODE_PULLUP;
     PINSEL_ConfigPin(&pinEINT0);
     /* configuracion con driver del ADC 						 */
-	ADC_Init(LPC_ADC, 200000);						// Frecuencia de 200k
-	ADC_ChannelCmd(LPC_ADC,0,ENABLE);				// Habilita el canal 0
-	ADC_PowerdownCmd(LPC_ADC, 0);
-	return;
+    ADC_Init(LPC_ADC, 200000);						// Frecuencia de 200k
+    ADC_ChannelCmd(LPC_ADC,0,ENABLE);				// Habilita el canal 0
+    ADC_PowerdownCmd(LPC_ADC, 0);
+    return;
 }
 
 void habilitarAdc(void) {
@@ -378,7 +378,7 @@ void deshabilitarAdc(void) {
 }
 
 void ADC_IRQHandler(void) {
-    if( LPC_ADC->ADSTAT & 1 ){
+	if( LPC_ADC->ADSTAT & 1 ){
     	uint8_t ascciValue[4];
     	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
@@ -387,8 +387,8 @@ void ADC_IRQHandler(void) {
     		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
     	}
     }
-    LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
-    return;
+	LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
+	return;
 }
 
 
