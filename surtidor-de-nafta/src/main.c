@@ -292,11 +292,13 @@ void TIMER0_IRQHandler(void)
 	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
 	if(!captureFlag)//TC has overflowed
 	{
+		estadoDispenser='1';
 		primerValor = LPC_TIM0->CR0;
 		captureFlag = 1;
 	}
 	else
 	{
+		estadoDispenser='2';
 		segundoValor 		= LPC_TIM0->CR0;
 		captureAcumulador 	+= ( segundoValor - primerValor );
 		captureFlag  		= 0;
