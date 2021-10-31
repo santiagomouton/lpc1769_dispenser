@@ -81,7 +81,7 @@ int main(void){
 
 	LPC_GPIO0->FIODIR     |= (1<<22);
 
-	//Teclado
+	//Teclado ok
 	configurarPuertosTeclado();
 	confIntGPIOPorEINT();
 
