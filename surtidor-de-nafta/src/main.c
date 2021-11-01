@@ -11,7 +11,11 @@
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
 #include "lpc17XX_adc.h"
-//#include "lpc17XX_gpio.h"
+#include "lpc17XX_gpio.h"
+
+#include "lpc17xx_exti.h"
+
+#include "lpc17xx_pinsel.h"
 #endif
 
 
@@ -50,6 +54,7 @@ void configurarEINT2();
 
 /* ADC */
 void configurarAdc(void);
+void deshabilitarAdc(void);
 
 char ingresadoPorTeclado[10]="";
 
@@ -387,7 +392,8 @@ void ADC_IRQHandler(void) {
     		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
     	}
     }
-	LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
+	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
+	//xq este registro es de sólo lectura
 	return;
 }
 
