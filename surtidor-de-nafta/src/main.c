@@ -12,6 +12,9 @@
 #include "LPC17xx.h"
 #include "lpc17XX_adc.h"
 #include "lpc17XX_gpdma.h"
+#include "lpc17XX_gpio.h"
+#include "lpc17xx_exti.h"
+#include "lpc17xx_pinsel.h"
 #endif
 
 
@@ -22,7 +25,7 @@
 
 
 //#include "Teclado.h"
-//#include "Uart.h"
+#include "Uart.h"
 #define PRECIO_NAFTA 110
 #define PRECIO_GASOIL 90
 #define CAUDAL_POR_SEG 0.5
@@ -50,6 +53,7 @@ void configurarEINT2();
 
 /* ADC */
 void configurarAdc(void);
+void deshabilitarAdc(void);
 
 char ingresadoPorTeclado[10]="";
 
@@ -226,8 +230,6 @@ void confIntGPIOPorEINT(void){
 void loopTeclado(){
 	//Barrido por las filas
 	char teclaPresionada=' ';
-	int asd=LPC_GPIOINT->IO2IntStatR;
-	int nose=0;
 	int numCol=0;
 	if(LPC_GPIOINT->IO2IntStatR & (1<<4)){numCol=0;}
 	else if(LPC_GPIOINT->IO2IntStatR & (1<<5)){numCol=1;}
@@ -261,7 +263,6 @@ void EINT3_IRQHandler(void){
 	for(int i=0; i<4;i++){
 		LPC_GPIOINT -> IO2IntClr |= ((1 << pinesColumnas[i])); //Limpia la bandera
 	}
-	int asd=LPC_GPIOINT->IO2IntStatR;
 	NVIC_EnableIRQ(EINT3_IRQn);
 }
 
@@ -342,7 +343,7 @@ void EINT2_IRQHandler(void){//consigna de EINT
 
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
-    	uint8_t ascciValue[4];
+    	char ascciValue[4];//habi puesto int y lo pasé a char
     	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
     	for(uint8_t i; i<4; i++) {
@@ -350,7 +351,8 @@ void ADC_IRQHandler(void) {
     		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
     	}
     }
-	LPC_ADC->ADSTAT &= ~( 1 << 16 ); 						// Bajo la bandera de interrupcion del ADC
+	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
+	//xq este registro es de sólo lectura
 	return;
 }
 
