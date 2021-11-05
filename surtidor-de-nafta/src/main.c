@@ -346,12 +346,9 @@ void EINT2_IRQHandler(void){//consigna de EINT
 
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
-<<<<<<< HEAD
+
     	char ascciValue[4];									// Arreglo de valores de la conversion
 
-=======
-    	char ascciValue[4];//habi puesto int y lo pasé a char
->>>>>>> parent of e969d63 (adc adm y uart3)
     	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
     	for(uint8_t i; i<4; i++) {
