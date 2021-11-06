@@ -356,7 +356,3 @@ void ADC_IRQHandler(void) {
 	return;
 }
 
-
-
-
-

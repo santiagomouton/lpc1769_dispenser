@@ -29,7 +29,7 @@ all: surtidor-de-nafta.axf
 surtidor-de-nafta.axf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MCU Linker'
-	arm-none-eabi-gcc -nostdlib -L"C:\Users\Scoles\Documents\MCUXpressoIDE_11.4.1_6260\workspace\CMSISv2p00_LPC17xx\Debug" -Xlinker -Map="surtidor-de-nafta.map" -Xlinker --cref -Xlinker --gc-sections -Xlinker -print-memory-usage -mcpu=cortex-m3 -mthumb -T "surtidor-de-nafta_Debug.ld" -o "surtidor-de-nafta.axf" $(OBJS) $(USER_OBJS) $(LIBS)
+	arm-none-eabi-gcc -nostdlib -L"C:\Users\Laudi\Downloads\TPElecDigital3\lpc1769_dispenser\CMSISv2p00_LPC17xx\Debug" -Xlinker -Map="surtidor-de-nafta.map" -Xlinker --cref -Xlinker --gc-sections -Xlinker -print-memory-usage -mcpu=cortex-m3 -mthumb -T "surtidor-de-nafta_Debug.ld" -o "surtidor-de-nafta.axf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build

@@ -8,11 +8,11 @@
 void configurarUart3(void){
 	//configuracion de pin Tx
 	PINSEL_CFG_Type PinTx;
-	PinCfg.Funcnum = 2;
-	PinCfg.OpenDrain = 0;
-	PinCfg.Pinmode = 0;
-	PinCfg.Pinnum = 0;
-	PinCfg.Portnum = 0;
+	PinTx.Funcnum = 2;
+	PinTx.OpenDrain = 0;
+	PinTx.Pinmode = 0;
+	PinTx.Pinnum = 0;
+	PinTx.Portnum = 0;
 	PINSEL_ConfigPin(&PinTx);
 	UART_CFG_Type UARTConfigStruct;
 	UART_FIFO_CFG_Type UARTFIFOConfigStruct;
