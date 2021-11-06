@@ -1,7 +1,5 @@
-#ifndef DMA_UART_H_
-#define DMA_UART_H_
-
-
+#ifndef DMA_UART3_H_
+#define DMA_UART3_H_
 
 #endif /* DMA_UART_H_ */
 

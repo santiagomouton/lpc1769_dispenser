@@ -8,8 +8,8 @@
 #endif
 
 #include <cr_section_macros.h>
+#include "Adc.h"
 
-//##################Conversion analogico-digital y paso de datos a UART#######
 /*	HACE USO DE EINT0 PARA INICIO DE CONVERSION */
 void configurarAdc(void) {
 	/* configuracion puerto de entrada para conversion 			 */
@@ -26,7 +26,7 @@ void configurarAdc(void) {
 	pinAnalog.Funcnum = PINSEL_FUNC_1;
 	pinAnalog.Pinmode = PINSEL_PINMODE_PULLUP;
 	PINSEL_ConfigPin(&pinEINT0);
-	/* configuracion con driver del ADC 						 */
+
 	ADC_Init(LPC_ADC, 200000);						// Frecuencia de 200k
 	ADC_ChannelCmd(LPC_ADC,0,ENABLE);				// Habilita el canal 0
 	ADC_PowerdownCmd(LPC_ADC, 0);
@@ -34,7 +34,6 @@ void configurarAdc(void) {
 }
 
 void habilitarAdc(void) {
-	//ADC_ChannelCmd(LPC_ADC,0,ENABLE);
 	ADC_StartCmd(LPC_ADC, ADC_START_ON_EINT0);		// Configuro inicio de conversion por EINT0
 	ADC_IntConfig(LPC_ADC,ADC_ADINTEN0,ENABLE);		// Habilito las interrupciones por canal 0
 	return;

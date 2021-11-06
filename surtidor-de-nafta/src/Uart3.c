@@ -9,8 +9,9 @@
 #endif
 
 #include <cr_section_macros.h>
+#include "Uart3.h"
 
-void configurarUart3Sant(void){
+void configurarUart3(void){
 	//configuracion de pin Tx
 	PINSEL_CFG_Type PinTx;
 	PinTx.Funcnum = 2;

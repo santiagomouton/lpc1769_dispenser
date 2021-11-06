@@ -5,8 +5,7 @@
 #endif
 
 #include <cr_section_macros.h>
-
-#define DMA_SIZE 60
+#include "Dma_uart3.h"
 
 
 void configuracionDmaCanalUart(uint8_t* valorConversion) {
@@ -16,13 +15,13 @@ void configuracionDmaCanalUart(uint8_t* valorConversion) {
 	DMA_LLI_Struct.SrcAddr= (uint32_t)valorConversion;
 	DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THR);
 	DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
-	DMA_LLI_Struct.Control= DMA_SIZE
-			| (2<<18) //source width 32 bit
-			| (2<<21) //dest. width 32 bit
+	DMA_LLI_Struct.Control= sizeof(valorConversion)
+					  //default src width 8 bit
+			 	 	  //default dest width 8 bit
 			| (1<<26) //source increment
 			;
-	/* GPDMA block section -------------------------------------------- */
-	/* Initialize GPDMA controller */
+	// Desabilito la interrupcion de GDMA
+	NVIC_DisableIRQ(DMA_IRQn);
 	GPDMA_Init();
 	// Setup GPDMA channel --------------------------------
 	// canal 0
@@ -32,7 +31,7 @@ void configuracionDmaCanalUart(uint8_t* valorConversion) {
 	// Destino
 	GPDMACfg.DstMemAddr = 0;
 	// Tamano de transferencia
-	GPDMACfg.TransferSize = 60;
+	GPDMACfg.TransferSize = sizeof(valorConversion);
 	GPDMACfg.TransferWidth = 0;
 	// Tipo de transferencia
 	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;

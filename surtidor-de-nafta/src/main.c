@@ -25,7 +25,9 @@
 
 
 //#include "Teclado.h"
-#include "Uart.h"
+#include "Uart3.h"
+#include "Adc.h"
+#include "Dma_uart3.h"
 #define PRECIO_NAFTA 110
 #define PRECIO_GASOIL 90
 #define CAUDAL_POR_SEG 0.5
@@ -40,8 +42,6 @@ void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 void surtirHastaLlenar();
 void surtirPorCapture();
-//void configurarAdc(void);
-void habilitarAdc(void);
 
 /* CAPTURE PARA MANGUERA */
 //void TIMER0_IRQHandler(void);
@@ -51,9 +51,6 @@ void dashabilitarCapture(void) ;
 
 void configurarEINT2();
 
-/* ADC */
-//void configurarAdc(void);
-void deshabilitarAdc(void);
 
 char ingresadoPorTeclado[10]="";
 
@@ -374,8 +371,8 @@ void EINT2_IRQHandler(void){//consigna de EINT
 
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
-		uint8_t ascciValue[4];									// Arreglo de valores de la conversion
-    	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
+		uint8_t ascciValue[4];								// Arreglo de valores de la conversion
+    	conversionValor = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
     	configuracionDmaCanalUart(&ascciValue);
     	activarDmaCanalUart();
