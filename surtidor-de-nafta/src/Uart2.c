@@ -1,11 +1,16 @@
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
-#include "lpc17XX_uart.h"
+#include "lpc17XX_adc.h"
+#include "lpc17XX_gpdma.h"
+#include "lpc17XX_gpio.h"
+#include "lpc17xx_exti.h"
+#include "lpc17xx_pinsel.h"
+#include "lpc17xx_uart.h"
 #endif
 
 #include <cr_section_macros.h>
 
-void configurarUart3(void){
+void configurarUart3Sant(void){
 	//configuracion de pin Tx
 	PINSEL_CFG_Type PinTx;
 	PinTx.Funcnum = 2;
@@ -24,7 +29,8 @@ void configurarUart3(void){
 	UART_Init(LPC_UART3, &UARTConfigStruct);
 	//Configuracion por defecto de la FIFO, excepto por asociar  el DMA
 	UART_FIFOConfigStructInit(&UARTFIFOConfigStruct);
-	UARTFIFOConfigStruct->FIFO_DMAMode = ENABLE;
+
+	UARTFIFOConfigStruct.FIFO_DMAMode = ENABLE;
 	//Inicializa FIFO
 	UART_FIFOConfig(LPC_UART3, &UARTFIFOConfigStruct);
 	//Habilita transmision

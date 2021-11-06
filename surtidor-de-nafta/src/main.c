@@ -40,7 +40,7 @@ void loopTeclado(void);
 void confIntGPIOPorEINT(void);
 void surtirHastaLlenar();
 void surtirPorCapture();
-void configurarAdc(void);
+//void configurarAdc(void);
 void habilitarAdc(void);
 
 /* CAPTURE PARA MANGUERA */
@@ -52,7 +52,7 @@ void dashabilitarCapture(void) ;
 void configurarEINT2();
 
 /* ADC */
-void configurarAdc(void);
+//void configurarAdc(void);
 void deshabilitarAdc(void);
 
 char ingresadoPorTeclado[10]="";
@@ -96,18 +96,49 @@ int main(void){
 	LPC_GPIO0->FIODIR     |= (1<<22);
 
 	//Teclado ok
-	configurarPuertosTeclado();
-	confIntGPIOPorEINT();
+	/*configurarPuertosTeclado();
+	confIntGPIOPorEINT();*/
 
 	//Timer y capture ok
-	configurarCapture();
+	/*configurarCapture();
+	 *
+	 */
+
+	/*Configuracion DMA UARt Santi*/
+	 /*configurarAdc();
+	 habilitarAdc();*/
+
+	//configurarUart3Sant();
+	  //Configuracion UART3
+	/*
+	    LPC_PINCON -> PINSEL0 |= (1<< 1);   // pin 0.0 como TXD3
+	    LPC_SC     -> PCONP   |= (1<<25);   // enciendo periferico uart3
+	    LPC_UART3  -> LCR     |= (1<< 7);   // DLAB=1 para habilitar registros
+	    LPC_UART3  -> DLL      = 163;
+	    LPC_UART3  -> DLM      = 0;         // para BR=9600
+	    LPC_UART3  -> LCR     &=~(1<< 7);   // vuelvo a 0 DLAB
+	    LPC_UART3  -> LCR     |= (0b11<<0); // 8 bits
+	    */
+
+	 char nose [] = {'1','2','\n'};
+
+	 retardoEnSeg(1);
+	 configuracionDmaCanalUart(&nose);//este los carga
+	 retardoEnSeg(1);
+	 activarDmaCanalUart();//envia los datos
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
 		//LPC_GPIO0->FIOSET |= (1<<22);  // apaga el led
 		//retardoEnSeg(1);
 		//LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
-		//retardoEnSeg(1);
+
+		/*for(int j=0;j<3;j++)
+		{
+			enviarChar (nose[j]);                         // envio los 2 caracteres
+		}*/
+		retardoEnSeg(1);
+
 /*
 		//secuencia de test1
 		estadosAdmin('1');
@@ -343,13 +374,15 @@ void EINT2_IRQHandler(void){//consigna de EINT
 
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
-    	char ascciValue[4];									// Arreglo de valores de la conversion
+		uint8_t ascciValue[4];									// Arreglo de valores de la conversion
     	conversionValor = ((LPC_ADC->ADDR0) >> 4) & 0xFFF;
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
-    	for(uint8_t i; i<4; i++) {
+    	configuracionDmaCanalUart(&ascciValue);
+    	activarDmaCanalUart();
+    	/*for(uint8_t i; i<4; i++) {
     		enviarChar(ascciValue[i]);						// Envio los caracteres por UART
     		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
-    	}
+    	}*/
     }
 	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
 	//xq este registro es de sólo lectura

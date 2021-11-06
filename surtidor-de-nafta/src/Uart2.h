@@ -3,4 +3,4 @@
 #endif /* UART2_H_ */
 
 
-void configurarUart3(void);
+configurarUart3Sant(void);

@@ -6,13 +6,15 @@
 
 #include <cr_section_macros.h>
 
+#define DMA_SIZE 60
+
 
 void configuracionDmaCanalUart(uint8_t* valorConversion) {
 	GPDMA_Channel_CFG_Type GPDMACfg;
 	GPDMA_LLI_Type DMA_LLI_Struct;
 	//Prepare DMA link list item structure
 	DMA_LLI_Struct.SrcAddr= (uint32_t)valorConversion;
-	DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THX);
+	DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THR);
 	DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
 	DMA_LLI_Struct.Control= DMA_SIZE
 			| (2<<18) //source width 32 bit

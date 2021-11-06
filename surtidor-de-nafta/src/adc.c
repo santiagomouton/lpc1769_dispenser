@@ -1,5 +1,10 @@
 #ifdef __USE_CMSIS
 #include "LPC17xx.h"
+#include "lpc17XX_adc.h"
+#include "lpc17XX_gpdma.h"
+#include "lpc17XX_gpio.h"
+#include "lpc17xx_exti.h"
+#include "lpc17xx_pinsel.h"
 #endif
 
 #include <cr_section_macros.h>
