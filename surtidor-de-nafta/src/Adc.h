@@ -14,5 +14,6 @@
 
 
 void configurarAdc(void);
-void habilitarAdc(void);
-void deshabilitarAdc(void);
+void habilitarAdcPorMatch(void);
+void deshabilitarAdcPorMatch(void);
+void conversionAhora(void);

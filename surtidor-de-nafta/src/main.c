@@ -185,6 +185,7 @@ void estadosAdmin(char datoDelTeclado){
 			estadoDispenser = '1';
 			//disparás una configuración de timer para que cargue la nafta
 			//iniciarCapture(void);
+			activarDmaCanalUart();
 		}
 		else{
 			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
@@ -329,9 +330,10 @@ void TIMER0_IRQHandler(void)
 	if(!captureFlag)//TC has overflowed
 	{
 		estadoDispenser='1';
-		habilitarAdc();
 		primerValor = LPC_TIM0->CR0;
 		captureFlag = 1;
+		habilitarAdcPorMatch();
+		conversionAhora();
 	}
 	else
 	{
@@ -381,7 +383,6 @@ void ADC_IRQHandler(void) {
     	if(!captureFlag) {
     		deshabilitarAdc();
     	}
-    	//activarDmaCanalUart();
 
 	}
 	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
