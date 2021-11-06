@@ -86,6 +86,7 @@ uint16_t conversionValor  = 0;
 
 int main(void){
 
+	configurarAdc();
 	//uint32_t relojCpu = SystemCoreClock;
 	//printf("%d",2);
 	resetBufferTeclado();
@@ -117,7 +118,7 @@ int main(void){
 	    LPC_UART3  -> LCR     |= (0b11<<0); // 8 bits
 	    */
 
-	 char nose [] = {'1','2','\n'};
+	 char nose [] = {""};
 
 	 retardoEnSeg(1);
 	 configuracionDmaCanalUart(&nose);//este los carga
@@ -296,7 +297,7 @@ void EINT3_IRQHandler(void){
 
 
 
-//##########################TIMER0, TIMER 0 y CAPTURE####################################
+//########################## TIMER 0 y CAPTURE####################################
 
 
 //Acá se configura el Capture
@@ -328,6 +329,7 @@ void TIMER0_IRQHandler(void)
 	if(!captureFlag)//TC has overflowed
 	{
 		estadoDispenser='1';
+		habilitarAdc();
 		primerValor = LPC_TIM0->CR0;
 		captureFlag = 1;
 	}
@@ -369,18 +371,19 @@ void EINT2_IRQHandler(void){//consigna de EINT
 }
 
 
+//##################Realiza la conversion, saca el precio y verifica que ya no habilitado#####################
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
+
 		uint8_t ascciValue[4];								// Arreglo de valores de la conversion
     	conversionValor = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
     	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
-    	configuracionDmaCanalUart(&ascciValue);
-    	activarDmaCanalUart();
-    	/*for(uint8_t i; i<4; i++) {
-    		enviarChar(ascciValue[i]);						// Envio los caracteres por UART
-    		// retardoEnMs(10) 		POSIBLEMENTE HAGA FALTA UN RETARDO
-    	}*/
-    }
+    	if(!captureFlag) {
+    		deshabilitarAdc();
+    	}
+    	//activarDmaCanalUart();
+
+	}
 	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
 	//xq este registro es de sólo lectura
 	return;

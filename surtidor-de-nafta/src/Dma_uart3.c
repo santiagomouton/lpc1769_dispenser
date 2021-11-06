@@ -19,6 +19,7 @@ void configuracionDmaCanalUart(uint8_t* valorConversion) {
 					  //default src width 8 bit
 			 	 	  //default dest width 8 bit
 			| (1<<26) //source increment
+			| (2<<12)
 			;
 	// Desabilito la interrupcion de GDMA
 	NVIC_DisableIRQ(DMA_IRQn);
