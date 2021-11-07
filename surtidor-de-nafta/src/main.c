@@ -80,9 +80,9 @@ char  bufferTeclado[10];
 float montoAPagar=0;
 
 /*#########Variables del ADC###########*/
-uint16_t conversionValor  = 0;
-
-
+uint16_t acumuladorConversion 	= 0;
+uint16_t numeroMuestras 		= 0;
+uint16_t promedioConversion 	= 0;
 
 int main(void){
 
@@ -376,11 +376,12 @@ void EINT2_IRQHandler(void){//consigna de EINT
 //##################Realiza la conversion, saca el precio y verifica que ya no habilitado#####################
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
-
-		uint8_t ascciValue[4];								// Arreglo de valores de la conversion
-    	conversionValor = ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
-    	itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
+		numeroMuestras += 1;
+		acumuladorConversion += ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
+		//uint8_t ascciValue[4];								// Arreglo de valores de la conversion
+    	//itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
     	if(!captureFlag) {
+    		promedioConversion = acumuladorConversion / numeroMuestras;
     		deshabilitarAdc();
     	}
 
