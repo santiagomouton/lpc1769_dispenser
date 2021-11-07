@@ -47,21 +47,23 @@ void surtirPorCapture();
 //void TIMER0_IRQHandler(void);
 void configurarCapture(void);
 void iniciarCapture(void);
-void dashabilitarCapture(void) ;
+void deshabilitarCapture(void) ;
+void calcularCombustiblePorCaudal(void);
 
 void configurarEINT2();
 
-int global_adc=0;
+int global_adc=0;//Es el caudal en litros/seg del surtidor en tiempo REAL
 
 char ingresadoPorTeclado[10]="";
 
 uint16_t cantidadDeLitrosACargar=0; 
+float cantidadDeLitrosCargados=0.0;
 
 char ultimaTeclaPresionada=' ';
 char modoCombustible		= '0'; // 0-Espera orden, 1-Carga Nafta, 2-Carga Gasoil
 char modoCarga				= '0'; // 0-Espera orden, 1-Cant de litros, 2-Hasta que llene, 3-Modo abierto
 char modoIngresarCantidad	= '0'; // 1-cantidad de litros, //2-cantidad de plata
-char estadoDispenser		= '0'; // 1-llenando, 2-Esperando evento de llenado
+char estadoDispenser		= '0'; // 1-Operativo, //2-Surtiendo nafta
 
 /*#########Variables del Capture#########*/
 uint32_t primerValor		= 0;
@@ -76,13 +78,13 @@ char teclas[4][4] = {{'1','2','3','A'},
                      {'4','5','6','B'},
                      {'7','8','9','C'},
                      {'*','0','#','D'}};
-int cantidadDeDatosIngresadosPorTeclado=0;
+int cantidadDeDatosIngresadosPorTeclado=0;//es el indice del buffer del teclado para ir cagando los valores de los litros en el modo ingresar cantidad
 char  bufferTeclado[10];
 float montoAPagar=0;
 
 /*#########Variables del ADC###########*/
 uint32_t acumuladorConversion 	= 0;
-uint16_t numeroMuestras 		= 0;
+uint16_t numeroMuestras 		= 0;//por match
 uint32_t promedioConversion 	= 0;
 
 
@@ -94,6 +96,11 @@ int main(void){
 	resetBufferTeclado();
 
 	LPC_GPIO0->FIODIR     |= (1<<22);
+
+	//todos los pines por defecto vienen com oentrada, pull-up y GPIO
+	//sensor de llenado
+	LPC_PINCON->PINMODE0 |=(3<<18);//pongo pull down
+
 
 	//Teclado ok
 	/*configurarPuertosTeclado();
@@ -176,27 +183,31 @@ void estadosAdmin(char datoDelTeclado){
 	}
 	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
 		modoCarga = datoDelTeclado;
-		if (modoCarga=='2'){
-
+		if (modoCarga=='2'){//modo llenar tanque
+			iniciarCapture();
+			configurarEINT2();
 		}
-		else if(modoCarga=='3'){
-			surtirPorCapture();
+		else if(modoCarga=='3'){//modo carga libre
+			iniciarCapture();
+			configurarEINT2();
 		}
 	}
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
 		modoIngresarCantidad = datoDelTeclado;
 	}
 	else if(modoIngresarCantidad!='0'){
-		if(datoDelTeclado=='#')
+		if(datoDelTeclado=='#')//yo ya ingresé los litros que quiero y disparo todo lo necesario
 		{
 			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado = 0;
-			resetEstados();
-			resetBufferTeclado();
-			estadoDispenser = '1';
+			//resetEstados();//se puede hacer mas al final OJO
+			resetBufferTeclado();// ok
+			estadoDispenser = '1';//dispenser operativo
 			//disparás una configuración de timer para que cargue la nafta
-			//iniciarCapture(void);
-			activarDmaCanalUart();
+			iniciarCapture();//habilito el capture para el gatillo
+			//configurarEINT2();
+
+			//activarDmaCanalUart();
 		}
 		else{
 			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
@@ -216,8 +227,8 @@ void surtirHastaLlenar()
 
 }
 void surtirPorCapture(){
-	iniciarCapture();
-	configurarEINT2();
+	//iniciarCapture();
+	//configurarEINT2();
 }
 
 void resetEstados(void){
@@ -319,7 +330,7 @@ void configurarCapture(void) {
 	LPC_PINCON->PINSEL3  |= (3<<20);        	// Configuracion pin 1.26 como capture0.0
 	LPC_PINCON->PINMODE3 &= ~(3<<20);         	// Configuracion como pull-up
 	LPC_TIM0->CTCR       &= ~(3<<0);			// Timer Mode
-	LPC_TIM0->PR 		  = 6250000 - 1;		// Deseado 0,5 segundos = 2 periodo ==>  PR = 12,5Mhz/2 = 6,250Mhz
+	LPC_TIM0->PR 		  = 1250000  - 1;		// Deseado 0,1 segundos (menor q el adc q es de 0.5) = 10 periodo ==>  PR = 12,5Mhz/10 = 1,25Mhz
 	LPC_TIM0->CCR        |= (1<<1)|(1<<2);		// Conf capture, interrupcion, carga del timer por flanco de subida y bajada.
 	LPC_TIM0->TCR        &= ~(1<<0);			// Timer disabled for counting
 	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
@@ -335,27 +346,40 @@ void iniciarCapture(void) {
 	return;
 }
 
+//Handler de capture o Gatillo surtidor
 void TIMER0_IRQHandler(void)
 {
 	LPC_TIM0->IR |= (1<<0); //Clear Interrupt Flag
-	if(!captureFlag)//TC has overflowed
-	{
-		estadoDispenser='1';
-		primerValor = LPC_TIM0->CR0;
-		captureFlag = 1;
-		habilitarAdcPorMatch();
-		conversionAhora();
-	}
-	else
+	if(!captureFlag)//Cuando aprieto el botón entro (está en cero)
 	{
 		estadoDispenser='2';
+		primerValor = LPC_TIM0->CR0;
+		captureFlag = 1;//gatillo presionado
+		habilitarAdcPorMatch();
+		//OJO ver DMA
+	}
+	else//cuando suelto el botón entro
+	{
+		deshabilitarAdcPorMatch();
+		estadoDispenser='1';
 		segundoValor 		= LPC_TIM0->CR0;
-		captureAcumulador 	+= ( segundoValor - primerValor );
-		captureFlag  		= 0;
+		captureAcumulador 	+= ( segundoValor - primerValor );//OJO capaz q lo podemos sacar
+		captureFlag  		= 0;//gatillo suelto
+		conversionAhora();
+     	cantidadDeLitrosCargados = cantidadDeLitrosCargados +(global_adc*(segundoValor -((numeroMuestras*0.5)+primerValor)));
+     	primerValor=0;
+     	segundoValor=0;
+     	numeroMuestras=0;
+		//capaz tengamos q resetear captures  (1er y 2do valor)
 	}
 }
 
-void dashabilitarCapture(void) {
+void calcularCombustiblePorCaudal(){
+
+
+}
+
+void deshabilitarCapture(void) {
 	LPC_TIM0->CCR		 &= ~(1<<0);
 	LPC_TIM0->TCR        &= ~(1<<0);			// Timer deshabilitado
 	LPC_TIM0->TCR        |= (1<<1);				// Timer reset.
@@ -377,8 +401,10 @@ void configurarEINT2(){
 void EINT2_IRQHandler(void){//consigna de EINT
 	NVIC_DisableIRQ(EINT2_IRQn);
 	montoAPagar=calcularCostoPorTiempo(CAUDAL_POR_SEG*captureAcumulador);
-	dashabilitarCapture();
+	deshabilitarCapture();
     LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupcion
+    //deshabilitarADC;----PENDIENTE SANTI
+    //deshabilitarEINT2;---PENDIENTE STEFANO/SANTI
     resetEstados();
     return;
 }
@@ -388,8 +414,28 @@ void EINT2_IRQHandler(void){//consigna de EINT
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
 		numeroMuestras += 1;
-		global_adc=ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
-		acumuladorConversion += ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
+		global_adc=ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);//hayq eu convertir a litros/seg
+		if (modoIngresarCantidad=='1' && captureFlag==1){
+			cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
+		}//si el captureFlag es ==2 se hace en el timer dentro del else
+		if(modoIngresarCantidad=='1' && cantidadDeLitrosCargados>=cantidadDeLitrosACargar){//solo me fijo en los litros cargados si estoy en ese modo xq si no va a haber cualquier cosa
+			deshabilitarCapture();
+			//deshabilitarADC;----PENDIENTE SANTI
+			resetEstados();
+			//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
+		}
+		if(modoCarga=='2'){
+			cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
+			if( LPC_GPIO0->FIOPIN & (1<<9) ){
+			deshabilitarCapture();
+			//deshabilitarADC;----PENDIENTE SANTI
+			resetEstados();
+			//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
+			}
+		}
+		//acumuladorConversion += ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
+
+		//para pasar por UART OJO, ver DMA
 		//uint8_t ascciValue[4];								// Arreglo de valores de la conversion
     	//itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
 
