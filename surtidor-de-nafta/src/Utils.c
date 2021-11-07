@@ -10,5 +10,5 @@ void retardoEnSeg(int tiempoEnSeg){
 }
 
 void retardoEnMs(int tiempoEnMs){
-	for(int contador=0 ; contador<tiempoEnMs*1000; contador++){};
+	for(int contador=0 ; contador<tiempoEnMs*100000; contador++){};
 }

@@ -4,6 +4,6 @@
 #endif /* DMA_UART_H_ */
 
 
-void configuracionDmaCanalUart(void);
+void configuracionDmaCanalUart(uint8_t*);
 void activarDmaCanalUart(void);
 void desactivarDmaCanalUart(void);

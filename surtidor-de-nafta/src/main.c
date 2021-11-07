@@ -51,6 +51,7 @@ void dashabilitarCapture(void) ;
 
 void configurarEINT2();
 
+int global_adc=0;
 
 char ingresadoPorTeclado[10]="";
 
@@ -80,9 +81,10 @@ char  bufferTeclado[10];
 float montoAPagar=0;
 
 /*#########Variables del ADC###########*/
-uint16_t acumuladorConversion 	= 0;
+uint32_t acumuladorConversion 	= 0;
 uint16_t numeroMuestras 		= 0;
-uint16_t promedioConversion 	= 0;
+uint32_t promedioConversion 	= 0;
+
 
 int main(void){
 
@@ -118,12 +120,21 @@ int main(void){
 	    LPC_UART3  -> LCR     |= (0b11<<0); // 8 bits
 	    */
 
-	 char nose [] = {""};
 
-	 retardoEnSeg(1);
-	 configuracionDmaCanalUart(&nose);//este los carga
-	 retardoEnSeg(1);
-	 activarDmaCanalUart();//envia los datos
+	//***DMA UART***
+	//char nose [] = {""};
+
+	//retardoEnSeg(1);
+	//configuracionDmaCanalUart(&nose);//este los carga
+	//retardoEnSeg(1);
+	//activarDmaCanalUart();//envia los datos
+
+
+	//***ADC individual***
+	configurarAdc();
+	habilitarAdcPorMatch();
+	//retardoEnMs(1);
+	conversionAhora();
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 	while(1){
@@ -135,7 +146,7 @@ int main(void){
 		{
 			enviarChar (nose[j]);                         // envio los 2 caracteres
 		}*/
-		retardoEnSeg(1);
+
 
 /*
 		//secuencia de test1
@@ -377,13 +388,15 @@ void EINT2_IRQHandler(void){//consigna de EINT
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
 		numeroMuestras += 1;
+		global_adc=ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
 		acumuladorConversion += ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);
 		//uint8_t ascciValue[4];								// Arreglo de valores de la conversion
     	//itoa(conversionValor, ascciValue, 10);				// Conversion de entero a string
-    	if(!captureFlag) {
+
+    	/*if(!captureFlag) {
     		promedioConversion = acumuladorConversion / numeroMuestras;
-    		deshabilitarAdc();
-    	}
+    		deshabilitarAdcPorMatch();
+    	}*/
 
 	}
 	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
