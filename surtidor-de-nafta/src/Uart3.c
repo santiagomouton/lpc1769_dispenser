@@ -39,3 +39,7 @@ void configurarUart3(void){
 	return;
 }
 
+
+void enviarCadena(uint8_t cadena) {
+	UART_Send(LPC_UART3,cadena,sizeof(cadena),BLOCKING);
+}

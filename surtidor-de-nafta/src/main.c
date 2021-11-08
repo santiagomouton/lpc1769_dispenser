@@ -32,6 +32,7 @@
 #define PRECIO_GASOIL 90
 #define CAUDAL_POR_SEG 0.5
 #define MAX_CAUDAL 2 //litros por segundo
+#define INTERVALO_ADC 0.5;
 
 
 void estadosAdmin(char datoDelTeclado);
@@ -41,8 +42,6 @@ float calcularCostoPorTiempo(float cantDeCombustible);
 void configurarPuertosTeclado(void);
 void loopTeclado(void);
 void confIntGPIOPorEINT(void);
-void surtirHastaLlenar();
-void surtirPorCapture();
 
 /* CAPTURE PARA MANGUERA */
 //void TIMER0_IRQHandler(void);
@@ -50,6 +49,7 @@ void configurarCapture(void);
 void iniciarCapture(void);
 void deshabilitarCapture(void) ;
 void calcularCombustiblePorCaudal(void);
+void calcularMontoAPagar(void);
 
 void configurarEINT2();
 
@@ -81,7 +81,7 @@ char teclas[4][4] = {{'1','2','3','A'},
                      {'*','0','#','D'}};
 int cantidadDeDatosIngresadosPorTeclado=0;//es el indice del buffer del teclado para ir cagando los valores de los litros en el modo ingresar cantidad
 char  bufferTeclado[10];
-float montoAPagar=0;
+int montoAPagar=0; //float antes
 
 /*#########Variables del ADC###########*/
 uint32_t acumuladorConversion 	= 0;
@@ -101,9 +101,9 @@ int main(void){
 
 
 	//Teclado ok
-	/*resetBufferTeclado();
+	resetBufferTeclado();
 	configurarPuertosTeclado();
-	confIntGPIOPorEINT();//configuras*/
+	confIntGPIOPorEINT();//configuras
 
 
 
@@ -132,6 +132,16 @@ int main(void){
 
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
+
+
+	/*UART SIMPLE*/
+	configurarUart3();
+	//uint8_t info[]=    "CHOFER:\t\t Juan Giron  \n\r";
+	uint8_t info[] = "Bienvenidos al programa \n\r"
+					 "Ingrese 1 para Nafta \n\r"
+					 "Ingrese 2 para Gasoil \n\r";
+	UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
+
 	//secuencia de test1
 	/*estadosAdmin('1');
 	estadosAdmin('1');
@@ -146,8 +156,8 @@ int main(void){
 
 	//------------------------
 	//secuencia de test2
-	estadosAdmin('1');
-	estadosAdmin('2');
+	/*estadosAdmin('1');
+	estadosAdmin('2');*/
 
 
 	//------------------------
@@ -155,7 +165,15 @@ int main(void){
 	/*estadosAdmin('1');
 	estadosAdmin('3');*/
 
+
+	//uint8_t  info[]="12\r\n";
+	//enviarCadena(info);
+
 	while(1){
+		retardoEnSeg(1);
+		//enviarCadena(info);
+
+
 
 	}
 
@@ -165,28 +183,45 @@ int main(void){
 
 void estadosAdmin(char datoDelTeclado){
 	if(modoCombustible == '0' && datoDelTeclado!='#'){//ok
+		uint8_t info[] = "--------------------- \n\r"
+						 "Ingrese 1 para cargar por cantidad de litros  \n\r"
+						 "Ingrese 2 llenar tanque \n\r"
+						 "Ingrese 3 para modo libre \n\r";
+		UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
+
 		modoCombustible = datoDelTeclado;
 		estadoDispenser=0;
 	}
 	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
 		modoCarga = datoDelTeclado;
 		if (modoCarga=='2'){//modo llenar tanque
+			uint8_t info[] = "--------------------- \n\r"
+							 "Modo de llenar tanque habilitado  \n\r";
+			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
 		}
 		else if(modoCarga=='3'){//modo carga libre
+			uint8_t info[] = "--------------------- \n\r"
+										 "Modo de carga libre habilitado  \n\r";
+			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
 		}
 	}
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
+		uint8_t info[] = "--------------------- \n\r"
+						 "Ingrese la cantidad de litros seguido de #  \n\r";
+		UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
 		modoIngresarCantidad = datoDelTeclado;
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')//yo ya ingresé los litros que quiero y disparo todo lo necesario
 		{
+
+
 			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado = 0;
 			//resetEstados();//se puede hacer mas al final OJO
@@ -194,6 +229,9 @@ void estadosAdmin(char datoDelTeclado){
 			estadoDispenser = '1';//dispenser operativo
 			//disparás una configuración de timer para que cargue la nafta
 			iniciarCapture();//habilito el capture para el gatillo
+			uint8_t info[] = "--------------------- \n\r"
+							 "Surtidor habilitado  \n\r";
+			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
 			//configurarEINT2();
 
 			//activarDmaCanalUart();
@@ -209,15 +247,6 @@ void estadosAdmin(char datoDelTeclado){
 		estadoDispenser='1';
 	}
 	return;
-}
-
-void surtirHastaLlenar()
-{
-
-}
-void surtirPorCapture(){
-	//iniciarCapture();
-	//configurarEINT2();
 }
 
 void resetEstados(void){
@@ -363,7 +392,7 @@ void TIMER0_IRQHandler(void)
 		else{
 			cantidadDeLitrosCargados = cantidadDeLitrosCargados +(global_adc*( (segundoValor*0.1) -(((numeroMuestras)*0.5)+(primerValor*0.1))  )  );
 		}
-
+		calcularMontoAPagar();
      	primerValor=0;
      	segundoValor=0;
      	numeroMuestras=0;
@@ -395,15 +424,28 @@ void configurarEINT2(){
 	NVIC_EnableIRQ(EINT2_IRQn);				// Habilita de interrupciones externas.
 }
 
+//suponemos que cuando pogo en la base, no estoy con el gatillo apretado
 void EINT2_IRQHandler(void){//consigna de EINT
 	NVIC_DisableIRQ(EINT2_IRQn);
-	montoAPagar=calcularCostoPorTiempo(CAUDAL_POR_SEG*captureAcumulador);
 	deshabilitarCapture();
     LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupcion
     //deshabilitarADC;----PENDIENTE SANTI
     //deshabilitarEINT2;---PENDIENTE STEFANO/SANTI
+    calcularMontoAPagar();
     resetEstados();
     return;
+}
+
+void calcularMontoAPagar()
+{
+	if(modoCombustible=='1'){
+		montoAPagar=cantidadDeLitrosCargados*PRECIO_NAFTA;
+	}
+	else if(modoCombustible=='2'){
+		montoAPagar=cantidadDeLitrosCargados*PRECIO_GASOIL;
+	}
+
+
 }
 
 
@@ -414,6 +456,7 @@ void ADC_IRQHandler(void) {
 		global_adc= ( ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0) * 2.0)/4096;
 		if (modoIngresarCantidad=='1' && captureFlag==1){
 			cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
+			calcularMontoAPagar();
 		}//si el captureFlag es ==2 se hace en el timer dentro del else
 		if(modoIngresarCantidad=='1' && cantidadDeLitrosCargados>=cantidadDeLitrosACargar){//solo me fijo en los litros cargados si estoy en ese modo xq si no va a haber cualquier cosa
 			deshabilitarAdcPorMatch();
@@ -431,9 +474,11 @@ void ADC_IRQHandler(void) {
 			resetEstados();
 			//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
 			}
+			calcularMontoAPagar();
 		}
 		if(modoCarga=='3'){
 				cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
+				calcularMontoAPagar();
 		}
 
 		//acumuladorConversion += ADC_ChannelGetData(LPC_ADC, ADC_CHANNEL_0);

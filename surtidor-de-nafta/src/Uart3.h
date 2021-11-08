@@ -4,3 +4,4 @@
 
 
 void configurarUart3(void);
+void enviarCadena(uint8_t cadena);
