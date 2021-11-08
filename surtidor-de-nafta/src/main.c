@@ -32,7 +32,8 @@
 #define PRECIO_GASOIL 90
 #define CAUDAL_POR_SEG 0.5
 #define MAX_CAUDAL 2 //litros por segundo
-#define INTERVALO_ADC 0.5;
+#define DIGITOS_MAX	4
+#define INTERVALO_ADC 0.5
 
 
 void estadosAdmin(char datoDelTeclado);
@@ -70,7 +71,7 @@ char estadoDispenser		= '0'; // 0-Deshabilitado, //1-Operativo, //2-Surtiendo na
 uint32_t primerValor		= 0;
 uint32_t segundoValor 		= 0;
 uint32_t captureAcumulador 	= 0;
-int captureFlag 		= 0;
+int captureFlag 			= 0;
 
 /*#########Variables del teclado#########*/
 int pinesFilas[] = {0,1,2,3};
@@ -84,10 +85,13 @@ char  bufferTeclado[10];
 int montoAPagar=0; //float antes
 
 /*#########Variables del ADC###########*/
-uint32_t acumuladorConversion 	= 0;
+//uint32_t acumuladorConversion 	= 0; // AL PEDO
 uint16_t numeroMuestras 		= 0;//por match
-uint32_t promedioConversion 	= 0;
+// uint32_t promedioConversion 	= 0; //AL PEDO
 
+/*#########UART3 precio y litros ######*/
+uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
+//uint8_t precioYLitros[] = "\r$0000 0000L"; PROBAR DSP ESTE MSJ
 
 int main(void){
 
@@ -133,6 +137,7 @@ int main(void){
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 
+	configuracionDmaCanalUart(&mensajePrecioYLitros);
 
 	/*UART SIMPLE*/
 	configurarUart3();
@@ -201,6 +206,8 @@ void estadosAdmin(char datoDelTeclado){
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
+
+			activarDmaCanalUart();
 		}
 		else if(modoCarga=='3'){//modo carga libre
 			uint8_t info[] = "--------------------- \n\r"
@@ -209,22 +216,24 @@ void estadosAdmin(char datoDelTeclado){
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
+
+			activarDmaCanalUart();
 		}
 	}
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
 		uint8_t info[] = "--------------------- \n\r"
 						 "Ingrese la cantidad de litros seguido de #  \n\r";
 		UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
-		modoIngresarCantidad = datoDelTeclado;
+		//estadoDispenser='0'; // ESTO PUEDE VENIR ACA
+		modoIngresarCantidad = datoDelTeclado;			// ENTRADA AL VICIO
 	}
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')//yo ya ingresé los litros que quiero y disparo todo lo necesario
 		{
 
-
 			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado = 0;
-			//resetEstados();//se puede hacer mas al final OJO
+
 			resetBufferTeclado();// ok
 			estadoDispenser = '1';//dispenser operativo
 			//disparás una configuración de timer para que cargue la nafta
@@ -234,7 +243,7 @@ void estadosAdmin(char datoDelTeclado){
 			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
 			//configurarEINT2();
 
-			//activarDmaCanalUart();
+			activarDmaCanalUart();
 		}
 		else{
 			bufferTeclado[cantidadDeDatosIngresadosPorTeclado]=datoDelTeclado;
@@ -386,6 +395,7 @@ void TIMER0_IRQHandler(void)
 		captureAcumulador 	+= ( segundoValor - primerValor );//OJO capaz q lo podemos sacar
 		captureFlag  		= 0;//gatillo suelto
 		conversionAhora();
+		// QUIZAS HAGA FALTA UN DELAY
 		if(numeroMuestras>0){
 			cantidadDeLitrosCargados = cantidadDeLitrosCargados +(global_adc*( (segundoValor*0.1) -(((numeroMuestras-1)*0.5)+(primerValor*0.1))  )  );
 		}
@@ -393,6 +403,7 @@ void TIMER0_IRQHandler(void)
 			cantidadDeLitrosCargados = cantidadDeLitrosCargados +(global_adc*( (segundoValor*0.1) -(((numeroMuestras)*0.5)+(primerValor*0.1))  )  );
 		}
 		calcularMontoAPagar();
+		modificarMensajePrecioYLitros();
      	primerValor=0;
      	segundoValor=0;
      	numeroMuestras=0;
@@ -449,7 +460,7 @@ void calcularMontoAPagar()
 }
 
 
-//##################Realiza la conversion, saca el precio y verifica que ya no habilitado#####################
+//##################Realiza la conversion, saca el precio y verifica que ya no este habilitado#####################
 void ADC_IRQHandler(void) {
 	if( LPC_ADC->ADSTAT & 1 ){
 		numeroMuestras += 1;
@@ -457,22 +468,21 @@ void ADC_IRQHandler(void) {
 		if (modoIngresarCantidad=='1' && captureFlag==1){
 			cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
 			calcularMontoAPagar();
+			modificarMensajePrecioYLitros();
 		}//si el captureFlag es ==2 se hace en el timer dentro del else
 		if(modoIngresarCantidad=='1' && cantidadDeLitrosCargados>=cantidadDeLitrosACargar){//solo me fijo en los litros cargados si estoy en ese modo xq si no va a haber cualquier cosa
 			deshabilitarAdcPorMatch();
 			deshabilitarCapture();
-			//deshabilitarADC;----PENDIENTE SANTI
 			resetEstados();
 			//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
 		}
 		if(modoCarga=='2'){
 			cantidadDeLitrosCargados=cantidadDeLitrosCargados+(global_adc*0.5);
 			if( LPC_GPIO0->FIOPIN & (1<<9) ){//se fija si se llenó el tanque
-			deshabilitarAdcPorMatch();
-			deshabilitarCapture();
-			//deshabilitarADC;----PENDIENTE SANTI
-			resetEstados();
-			//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
+				deshabilitarAdcPorMatch();
+				deshabilitarCapture();
+				resetEstados();
+				//deshabilitarEINT;---PENDIENTE STEFANO/SANTI
 			}
 			calcularMontoAPagar();
 		}
@@ -495,6 +505,20 @@ void ADC_IRQHandler(void) {
 	}
 	//LPC_ADC->ADSTAT &= ~( 1 << 16 ); // Bajo la bandera de interrupcion del ADC // ver lo del flag d einterrupcion de ADC
 	//xq este registro es de sólo lectura
+	return;
+}
+
+
+//################## Modificar el mensaje de precio y litros cargados #####################
+void modificarMensajePrecioYLitros() {
+	uint8_t precio[4];
+	uint8_t litros[4];               // POSIBLE PROBLEMA, POR CONVERTIR A STRING UN FLOAT
+	itoa(montoAPagar, precio, 10);				// Conversion de entero a string de montoAPagar
+	itoa(cantidadDeLitrosCargados, litros, 10);	// Conversion de entero a string de cantidadDeLitrosCargados
+	for(int i = 0; i<DIGITOS_MAX; i++) {
+		mensajePrecioYLitros[i+3] = precio[i];
+		mensajePrecioYLitros[i+8] = litros[i];
+	}
 	return;
 }
 

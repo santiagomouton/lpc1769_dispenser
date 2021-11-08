@@ -8,14 +8,14 @@
 #include "Dma_uart3.h"
 
 
-void configuracionDmaCanalUart(uint8_t* valorConversion) {
+void configuracionDmaCanalUart(uint8_t* mensajePrecioYLitros) {
 	GPDMA_Channel_CFG_Type GPDMACfg;
 	GPDMA_LLI_Type DMA_LLI_Struct;
 	//Prepare DMA link list item structure
-	DMA_LLI_Struct.SrcAddr= (uint32_t)valorConversion;
+	DMA_LLI_Struct.SrcAddr= (uint32_t)mensajePrecioYLitros;
 	DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THR);
 	DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
-	DMA_LLI_Struct.Control= sizeof(valorConversion)
+	DMA_LLI_Struct.Control= sizeof(mensajePrecioYLitros)
 					  //default src width 8 bit
 			 	 	  //default dest width 8 bit
 			| (1<<26) //source increment
@@ -28,11 +28,11 @@ void configuracionDmaCanalUart(uint8_t* valorConversion) {
 	// canal 0
 	GPDMACfg.ChannelNum = 0;
 	// Origen
-	GPDMACfg.SrcMemAddr = (uint32_t)(valorConversion);
+	GPDMACfg.SrcMemAddr = (uint32_t)(mensajePrecioYLitros);
 	// Destino
 	GPDMACfg.DstMemAddr = 0;
 	// Tamano de transferencia
-	GPDMACfg.TransferSize = sizeof(valorConversion);
+	GPDMACfg.TransferSize = sizeof(mensajePrecioYLitros);
 	GPDMACfg.TransferWidth = 0;
 	// Tipo de transferencia
 	GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
