@@ -36,6 +36,7 @@
 #define INTERVALO_ADC 0.5
 
 
+void arreglarCadena(char *cadena);
 void estadosAdmin(char datoDelTeclado);
 void resetEstados(void);
 void resetBufferTeclado(void);
@@ -92,6 +93,7 @@ uint16_t numeroMuestras 		= 0;//por match
 /*#########UART3 precio y litros ######*/
 uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
 //uint8_t precioYLitros[] = "\r$0000 0000L"; PROBAR DSP ESTE MSJ
+
 
 int main(void){
 
@@ -554,11 +556,13 @@ void ADC_IRQHandler(void) {
 
 //################## Modificar el mensaje de precio y litros cargados #####################
 void modificarMensajePrecioYLitros() {
-	uint8_t precio[4];
-	uint8_t litros[4];               // POSIBLE PROBLEMA, POR CONVERTIR A STRING UN FLOAT
+	uint8_t precio[DIGITOS_MAX];
+	uint8_t litros[DIGITOS_MAX];               // POSIBLE PROBLEMA, POR CONVERTIR A STRING UN FLOAT
 	itoa(montoAPagar, precio, 10);				// Conversion de entero a string de montoAPagar
 	itoa((int)cantidadDeLitrosCargados, litros, 10);	// Conversion de entero a string de cantidadDeLitrosCargados
 	//$0000 0000L // uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
+	arreglarCadena(precio);
+	arreglarCadena(litros);
 	if(montoAPagar>0){
 		int a=2;
 	}
@@ -567,5 +571,23 @@ void modificarMensajePrecioYLitros() {
 		mensajePrecioYLitros[i+7] = litros[i];
 	}
 	return;
+}
+
+void arreglarCadena(char *cadena){
+    int posicion = -1;
+	for(int i=DIGITOS_MAX-1; i>0; i--){
+	    if(cadena[i] == '\0' || cadena[i] == '\n'){
+	        posicion = i;
+
+	    }
+    }
+    if(posicion > 0) {
+        for(int k = 0; k<(DIGITOS_MAX - posicion); k++) {
+        	cadena[3] = cadena[2];
+    	    cadena[2] = cadena[1];
+    	    cadena[1] = cadena[0];
+    	    cadena[0] = '0';
+        }
+    }
 }
 
