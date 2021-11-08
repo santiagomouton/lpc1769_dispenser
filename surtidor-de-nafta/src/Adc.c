@@ -65,5 +65,6 @@ void conversionAhora(void) {
 	ADC_PowerdownCmd(LPC_ADC, 1);					// ADC power on
 	LPC_ADC->ADCR |=  ADC_START_NOW;     			// Convertir Ahora
 	NVIC_EnableIRQ(ADC_IRQn);
+	retardoEnMs(1);// xq el handler salta cada 5 [us]
 }
 
