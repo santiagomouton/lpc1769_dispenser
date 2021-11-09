@@ -35,8 +35,12 @@
 #define DIGITOS_MAX	4
 #define INTERVALO_ADC 0.5
 
+GPDMA_LLI_Type DMA_LLI_Struct;
+GPDMA_Channel_CFG_Type GPDMACfg;
+
 
 void arreglarCadena(char *cadena);
+void modificarMensajePrecioYLitros(void);
 void estadosAdmin(char datoDelTeclado);
 void resetEstados(void);
 void resetBufferTeclado(void);
@@ -54,6 +58,7 @@ void calcularCombustiblePorCaudal(void);
 void calcularMontoAPagar(void);
 
 void configurarEINT2();
+void configuracionDMAMain(void);
 
 float global_adc=0;//Es el caudal en litros/seg del surtidor en tiempo REAL
 
@@ -91,7 +96,7 @@ uint16_t numeroMuestras 		= 0;//por match
 // uint32_t promedioConversion 	= 0; //AL PEDO
 
 /*#########UART3 precio y litros ######*/
-uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
+uint8_t mensajePrecioYLitros[] = {"\r$0000 0000L\n\r"};
 //uint8_t precioYLitros[] = "\r$0000 0000L"; PROBAR DSP ESTE MSJ
 
 
@@ -139,43 +144,7 @@ int main(void){
 
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
 
-	/*###############--------------------##################---------------------################*/
-	/*CONFIGURACION DMA Y LPM*/
-	//configuracionDmaCanalUart(&mensajePrecioYLitros);
-	GPDMA_Channel_CFG_Type GPDMACfg;
-		GPDMA_LLI_Type DMA_LLI_Struct;
-		//Prepare DMA link list item structure
-		DMA_LLI_Struct.SrcAddr= (uint32_t)mensajePrecioYLitros;
-		DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THR);
-		DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
-		DMA_LLI_Struct.Control= sizeof(mensajePrecioYLitros)
-						  //default src width 8 bit
-				 	 	  //default dest width 8 bit
-				| (1<<26) //source increment
-				| (2<<12)
-				;
-		// Desabilito la interrupcion de GDMA
-		NVIC_DisableIRQ(DMA_IRQn);
-		GPDMA_Init();
-		// Setup GPDMA channel --------------------------------
-		// canal 0
-		GPDMACfg.ChannelNum = 0;
-		// Origen
-		GPDMACfg.SrcMemAddr = (uint32_t)(mensajePrecioYLitros);
-		// Destino
-		GPDMACfg.DstMemAddr = 0;
-		// Tamano de transferencia
-		GPDMACfg.TransferSize = sizeof(mensajePrecioYLitros);
-		GPDMACfg.TransferWidth = 0;
-		// Tipo de transferencia
-		GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
-		GPDMACfg.SrcConn = 0;
-		// Destino Periferico
-		GPDMACfg.DstConn = GPDMA_CONN_UART3_Tx;
-		// Asocio Linker List Item
-		GPDMACfg.DMALLI = (uint32_t)&DMA_LLI_Struct;
-		// Setup channel with given parameter
-		GPDMA_Setup(&GPDMACfg);
+
 
 
 
@@ -185,6 +154,9 @@ int main(void){
 					 "Ingrese 1 para Nafta \n\r"
 					 "Ingrese 2 para Gasoil \n\r";
 	UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
+
+	/*###############--------------------##################---------------------################*/
+	configuracionDMAMain();
 
 	//secuencia de test1
 	/*estadosAdmin('1');
@@ -206,15 +178,14 @@ int main(void){
 
 	//------------------------
 	//secuencia de test3
-	estadosAdmin('1');
-	estadosAdmin('3');
+	/*estadosAdmin('1');
+	estadosAdmin('3');*/
 
 
 	//uint8_t  info[]="12\r\n";
 	//enviarCadena(info);
 
 	while(1){
-		retardoEnSeg(1);
 		//enviarCadena(info);
 
 
@@ -239,6 +210,7 @@ void estadosAdmin(char datoDelTeclado){
 	else if(modoCombustible != '0' && modoCarga == '0' && modoIngresarCantidad == '0'){//ok
 		modoCarga = datoDelTeclado;
 		if (modoCarga=='2'){//modo llenar tanque
+			configuracionDMAMain();
 			uint8_t info[] = "--------------------- \n\r"
 							 "Modo de llenar tanque habilitado  \n\r";
 			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
@@ -246,10 +218,10 @@ void estadosAdmin(char datoDelTeclado){
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
-
-			activarDmaCanalUart();//santi stefano ojo
+			activarDmaCanalUart();
 		}
 		else if(modoCarga=='3'){//modo carga libre
+			configuracionDMAMain();
 			uint8_t info[] = "--------------------- \n\r"
 										 "Modo de carga libre habilitado  \n\r";//STEFANO
 			UART_Send(LPC_UART3,info,sizeof(info),BLOCKING);
@@ -257,8 +229,7 @@ void estadosAdmin(char datoDelTeclado){
 			iniciarCapture();
 			configurarEINT2();
 			estadoDispenser = '1';
-
-			activarDmaCanalUart();//santi stefano ojo
+			activarDmaCanalUart();
 		}
 	}
 	else if(modoCombustible != '0' && modoCarga == '1' && modoIngresarCantidad == '0'){
@@ -271,7 +242,7 @@ void estadosAdmin(char datoDelTeclado){
 	else if(modoIngresarCantidad!='0'){
 		if(datoDelTeclado=='#')//yo ya ingresé los litros que quiero y disparo todo lo necesario
 		{
-
+			configuracionDMAMain();
 			cantidadDeLitrosACargar = atoi(&bufferTeclado[0]) ;//obtenés la cantidad de litros o pesos
 			cantidadDeDatosIngresadosPorTeclado = 0;
 
@@ -305,6 +276,10 @@ void resetEstados(void){
 	modoIngresarCantidad='0';//1-cantidad de litros, //2-cantidad de plata
 	estadoDispenser='0';//1-llenando, 2-Esperando evento de llenado
 	captureFlag=0;
+	cantidadDeLitrosCargados=0;
+	cantidadDeLitrosACargar=0;
+	montoAPagar=0;
+	global_adc=0.0;
 }
 void resetBufferTeclado(void){
 	for(int i=0; i<10;i++){
@@ -470,9 +445,10 @@ void deshabilitarCapture(void) {
 //##################EINT 2 manguera reposada en un soporte#####################
 void configurarEINT2(){
 	LPC_PINCON->PINSEL4 |= (1<<24) ;		// p2.12 como EINT2
-	LPC_SC->EXTINT      |= (1<<2);   		// Limpia bandera de interrupci�n
+	LPC_PINCON->PINMODE4 |= (3<<24);		// pull-down
 	LPC_SC->EXTMODE     |= (1<<2); 			// Selecciona interrupcion por flanco
-	LPC_SC->EXTPOLAR    |= (1<<2); 			// Interrumpe cuando el flanco es de subida
+	LPC_SC->EXTPOLAR    &= ~(1<<2); 			// Interrumpe cuando el flanco es de subida
+	LPC_SC->EXTINT      |= (1<<2);   		// Limpia bandera de interrupci�n
 	NVIC_EnableIRQ(EINT2_IRQn);				// Habilita de interrupciones externas.
 }
 
@@ -481,10 +457,10 @@ void EINT2_IRQHandler(void){//consigna de EINT
 	NVIC_DisableIRQ(EINT2_IRQn);
 	deshabilitarAdcPorMatch();
 	deshabilitarCapture();
-    LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupcion
     calcularMontoAPagar();
     resetEstados();
     desactivarDmaCanalUart();
+    LPC_SC->EXTINT |= (1<<2); //Limpia bandera de interrupcion
     return;
 }
 
@@ -563,14 +539,52 @@ void modificarMensajePrecioYLitros() {
 	//$0000 0000L // uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
 	arreglarCadena(precio);
 	arreglarCadena(litros);
-	if(montoAPagar>0){
-		int a=2;
-	}
 	for(int i = 0; i<DIGITOS_MAX; i++) {
 		mensajePrecioYLitros[i+2] = precio[i];
 		mensajePrecioYLitros[i+7] = litros[i];
 	}
-	return;
+}
+
+void configuracionDMAMain(void){
+
+		DMA_LLI_Struct.SrcAddr= (uint32_t)mensajePrecioYLitros;
+		DMA_LLI_Struct.DstAddr= (uint32_t)&(LPC_UART3->THR);
+		DMA_LLI_Struct.NextLLI= (uint32_t)&DMA_LLI_Struct;
+		DMA_LLI_Struct.Control= sizeof(mensajePrecioYLitros)
+								  //default src width 8 bit
+						 	 	  //default dest width 8 bit
+						| (1<<26) //source increment
+						| (2<<12)
+						;
+		// Desabilito la interrupcion de GDMA
+		NVIC_DisableIRQ(DMA_IRQn);
+
+		//configuracionDmaCanalUart(&mensajePrecioYLitros);
+
+
+		//Prepare DMA link list item structure
+
+
+		GPDMA_Init();
+		// Setup GPDMA channel --------------------------------
+		// canal 0
+		GPDMACfg.ChannelNum = 0;
+		// Origen
+		GPDMACfg.SrcMemAddr = (uint32_t)(mensajePrecioYLitros);
+		// Destino
+		GPDMACfg.DstMemAddr = 0;
+		// Tamano de transferencia
+		GPDMACfg.TransferSize = sizeof(mensajePrecioYLitros);
+		GPDMACfg.TransferWidth = 0;
+		// Tipo de transferencia
+		GPDMACfg.TransferType = GPDMA_TRANSFERTYPE_M2P;
+		GPDMACfg.SrcConn = 0;
+		// Destino Periferico
+		GPDMACfg.DstConn = GPDMA_CONN_UART3_Tx;
+		// Asocio Linker List Item
+		GPDMACfg.DMALLI = (uint32_t)&DMA_LLI_Struct;
+		// Setup channel with given parameter
+		GPDMA_Setup(&GPDMACfg);
 }
 
 void arreglarCadena(char *cadena){
