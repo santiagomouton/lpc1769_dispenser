@@ -96,7 +96,7 @@ uint16_t numeroMuestras 		= 0;//por match
 // uint32_t promedioConversion 	= 0; //AL PEDO
 
 /*#########UART3 precio y litros ######*/
-uint8_t mensajePrecioYLitros[] = {"\r$0000 0000L\n\r"};
+uint8_t mensajePrecioYLitros[] = {"\r$0000 0000L\r"};
 //uint8_t precioYLitros[] = "\r$0000 0000L"; PROBAR DSP ESTE MSJ
 
 
@@ -140,12 +140,7 @@ int main(void){
 	retardoEnMs(20);
 	//iniciarCapture();//stf
 
-
-
 	LPC_GPIO0->FIOCLR |= (1<<22);  // prende el led
-
-
-
 
 
 	/*UART SIMPLE*/
@@ -187,8 +182,6 @@ int main(void){
 
 	while(1){
 		//enviarCadena(info);
-
-
 
 	}
 
@@ -532,8 +525,8 @@ void ADC_IRQHandler(void) {
 
 //################## Modificar el mensaje de precio y litros cargados #####################
 void modificarMensajePrecioYLitros() {
-	uint8_t precio[DIGITOS_MAX];
-	uint8_t litros[DIGITOS_MAX];               // POSIBLE PROBLEMA, POR CONVERTIR A STRING UN FLOAT
+	uint8_t precio[DIGITOS_MAX]={"0000"};
+	uint8_t litros[DIGITOS_MAX]={"0000"};               // POSIBLE PROBLEMA, POR CONVERTIR A STRING UN FLOAT
 	itoa(montoAPagar, precio, 10);				// Conversion de entero a string de montoAPagar
 	itoa((int)cantidadDeLitrosCargados, litros, 10);	// Conversion de entero a string de cantidadDeLitrosCargados
 	//$0000 0000L // uint8_t mensajePrecioYLitros[] = "\r$0000 0000L\n\r";
